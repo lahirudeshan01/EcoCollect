@@ -3,13 +3,14 @@
     "private": true,
     "version": "1.0.0",
     "workspaces": [
-        "apps/*",
+        "apps/backend",
+        "apps/frontend-next",
         "packages/*"
     ],
     "scripts": {
-        "dev": "turbo run dev --parallel",
+        "dev": "turbo run build --filter=@ecocollect/ui --filter=@ecocollect/shared-types && turbo run dev --parallel --filter=backend --filter=frontend-next",
         "build": "turbo run build",
-        "start": "turbo run start"
+        "start": "turbo run start --filter=backend --filter=frontend-next"
     },
     "devDependencies": {
         "turbo": "^2.1.3"
