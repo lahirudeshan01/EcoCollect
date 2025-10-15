@@ -4,7 +4,7 @@ import React from "react";
 // Single-file React component styled with Tailwind CSS
 // Drop this component into a React app (create-react-app, Next.js, Vite) with Tailwind configured.
 
-export default function EcoCollectHome() {
+export default function EcoCollectHome({ onNavigate }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white text-gray-900 antialiased">
       {/* NAV */}
@@ -25,7 +25,7 @@ export default function EcoCollectHome() {
           <a className="hover:text-emerald-600 transition">How it works</a>
           <a className="hover:text-emerald-600 transition">Features</a>
           <a className="hover:text-emerald-600 transition">For Residents</a>
-          <a className="hover:text-emerald-600 transition">For Authorities</a>
+          <a onClick={() => onNavigate('login')} className="hover:text-emerald-600 transition cursor-pointer">For Authorities</a>
           <a className="hover:text-emerald-600 transition">Docs</a>
         </nav>
 
