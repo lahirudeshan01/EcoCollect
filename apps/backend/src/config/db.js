@@ -16,8 +16,12 @@ async function sleep(ms) {
 }
 
 async function connectDB({ retries = Infinity, delayMs = 3000 } = {}) {
-  const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGO_URI is not set');
+  // Prefer explicit environment variable; fall back to localhost for development
+  let uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  if (!uri) {
+    uri = 'mongodb://127.0.0.1:27017/ecocollect_dev';
+    console.warn('MONGO_URI not set — falling back to local MongoDB at', uri, "(set MONGO_URI in .env to override)");
+  }
   const dbName = process.env.MONGO_DB_NAME || 'EcoCollectDB';
 
   const opts = {
