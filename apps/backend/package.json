@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "backend",
   "version": "1.0.0",
   "main": "src/server.js",
@@ -6,7 +6,8 @@
     "start": "node src/server.js",
     "dev": "node src/server.js",
     "build": "echo backend build",
-    "smoke": "node scripts/smoke-auth.js"
+    "smoke": "node scripts/smoke-auth.js",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -17,5 +18,12 @@
     "mongoose": "^7.0.0",
     "morgan": "^1.10.0"
   },
-  "private": true
+  "private": true,
+  "jest": {
+    "testEnvironment": "node",
+    "clearMocks": true
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
 }
