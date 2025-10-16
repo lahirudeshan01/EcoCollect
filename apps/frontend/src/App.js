@@ -16,7 +16,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/routes" element={<RouteOptimizationPage />} />
-        <Route path="/route-details" element={<RouteDetailsPage />} />
+        <Route path="/route-details/:id" element={<RouteDetailsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/pinithi-dashboard" element={<PinithiDashboard />} />
         <Route path="/authority/login" element={<AuthorityLoginPage />} />

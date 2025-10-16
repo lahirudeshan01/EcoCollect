@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Leaflet CSS for proper map display */
+@import 'leaflet/dist/leaflet.css';
+
+/* Custom styles for map legend */
+.leaflet-popup-content {
+  margin: 8px 12px !important;
+}
+
+.custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}

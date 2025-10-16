@@ -10,12 +10,15 @@ const AuthorityLoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const { data } = await api.post('/authorities/login', { username, password });
-      localStorage.setItem('authorityToken', data.token);
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Invalid credentials');
+    
+    // Bypass authentication - check credentials locally
+    if (username === 'admin' && password === 'password') {
+      // Store a fake token for consistency
+      localStorage.setItem('authorityToken', 'local-auth-token-' + Date.now());
+      // Navigate directly to routes page instead of dashboard
+      navigate('/routes');
+    } else {
+      setError('Invalid credentials. Use: admin / password');
     }
   };
 
@@ -54,7 +57,7 @@ const AuthorityLoginPage = () => {
             <div className="space-y-4">
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">
                 Welcome back,
-                <span className="text-emerald-600"> Authority</span>
+                <span className="text-emerald-600"> Manager</span>
               </h1>
               <p className="text-lg text-gray-600 max-w-xl">
                 Access your authority dashboard to monitor waste collection across your jurisdiction, 
@@ -109,6 +112,11 @@ const AuthorityLoginPage = () => {
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-gray-900">Authority Login</h2>
                   <p className="text-gray-600 mt-2">Sign in to access your authority dashboard</p>
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-700">
+                      <strong>Demo Credentials:</strong> admin / password
+                    </p>
+                  </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -119,7 +127,7 @@ const AuthorityLoginPage = () => {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition bg-white"
-                      placeholder="Enter your username"
+                      placeholder="admin"
                       required
                     />
                   </div>
@@ -131,7 +139,7 @@ const AuthorityLoginPage = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition bg-white"
-                      placeholder="Enter your password"
+                      placeholder="password"
                       required
                     />
                   </div>

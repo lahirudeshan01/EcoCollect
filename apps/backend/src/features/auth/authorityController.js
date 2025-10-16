@@ -1,15 +1,21 @@
-const authorityService = require('./authorityService');
+const { loginAuthority } = require('../../localAuth');
 
-const loginAuthority = async (req, res) => {
+const loginAuthorityController = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const { token, authority } = await authorityService.loginAuthority(username, password);
-    res.json({ token, authority });
+    
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    const result = await loginAuthority(username, password);
+    res.json(result);
   } catch (error) {
+    console.error('Login error:', error.message);
     res.status(401).json({ message: error.message });
   }
 };
 
 module.exports = {
-  loginAuthority,
+  loginAuthority: loginAuthorityController,
 };
