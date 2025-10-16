@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import config from '@ecocollect/config';
 import { Button } from '@ecocollect/ui';
+import toast from 'react-hot-toast';
 
 const { API_BASE } = config;
 
@@ -15,34 +16,53 @@ export default function LoginPage() {
 
   // If already logged in, redirect based on role
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('ecocollect_token') : null;
-    const role = typeof window !== 'undefined' ? localStorage.getItem('ecocollect_role') : null;
-    if (token && role) {
-      const upper = String(role).toUpperCase();
-      router.replace(upper === 'ADMIN' ? '/settings' : '/dashboard');
-    }
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/auth/session`, { credentials: 'include' });
+        if (r.ok) {
+          const me = await r.json();
+          const upper = String(me?.role || '').toUpperCase();
+          if (upper) router.replace(upper === 'ADMIN' ? '/settings' : '/dashboard');
+        }
+      } catch {}
+    })();
   }, [router]);
+
+  async function getCsrf(): Promise<string> {
+    const r = await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' });
+    const j = await r.json();
+    return j?.csrfToken || '';
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
+      // Simple client-side validation
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        throw new Error('Please enter a valid email');
+      }
+      if (!password || password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrf() },
+        credentials: 'include',
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Login failed');
-      // Store token client-side for now; consider HttpOnly cookie in production
-  localStorage.setItem('ecocollect_token', data.token);
-  localStorage.setItem('ecocollect_role', data.user?.role || 'USER');
-  if (data.user?.email) localStorage.setItem('ecocollect_email', data.user.email);
-  const role = String(data.user?.role || 'USER').toUpperCase();
+      if (!res.ok) throw new Error(data?.error?.message || data?.message || 'Login failed');
+      // Get session to know role/email
+      const me = await fetch(`${API_BASE}/auth/session`, { credentials: 'include' });
+      const meData = await me.json();
+      const role = String(meData?.role || 'USER').toUpperCase();
   router.replace((role === 'ADMIN' ? '/settings' : '/dashboard') as any);
+      toast.success('Signed in successfully');
     } catch (err: any) {
       setError(err.message || 'Login failed');
+      toast.error(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }

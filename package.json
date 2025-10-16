@@ -8,12 +8,14 @@
         "packages/*"
     ],
     "scripts": {
-        "dev": "turbo run build --filter=@ecocollect/ui --filter=@ecocollect/shared-types && turbo run dev --parallel --filter=backend --filter=frontend-next",
+        "predev": "turbo run build --filter=@ecocollect/ui --filter=@ecocollect/shared-types",
+        "dev": "npm run predev && concurrently \"npm --prefix ./apps/backend run dev\" \"npm --prefix ./apps/frontend-next run dev\"",
         "build": "turbo run build",
-        "start": "turbo run start --filter=backend --filter=frontend-next"
+        "start": "concurrently \"npm --prefix ./apps/backend run start\" \"npm --prefix ./apps/frontend-next run start\""
     },
     "devDependencies": {
-        "turbo": "^2.1.3"
+        "turbo": "^2.1.3",
+        "concurrently": "^8.2.0"
     },
     "packageManager": "npm@10.9.0",
     "dependencies": {

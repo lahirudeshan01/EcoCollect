@@ -3,6 +3,14 @@ const mongoose = require('mongoose');
 
 mongoose.set('strictQuery', true);
 
+// Optional: use an in-memory MongoDB for local development/testing when
+// USE_IN_MEMORY_MONGO=true. We lazy-load the memory server to avoid adding the
+// dependency in production unless requested.
+
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const useInMemoryMongo = process.env.USE_IN_MEMORY_MONGO === 'true';
+let mongoServer;
+
 async function sleep(ms) {
   return new Promise((res) => setTimeout(res, ms));
 }
@@ -20,6 +28,11 @@ async function connectDB({ retries = Infinity, delayMs = 3000 } = {}) {
 
   while (true) {
     try {
+      // If requested, start an in-memory Mongo and use its URI
+      if (useInMemoryMongo && !mongoServer) {
+        mongoServer = await MongoMemoryServer.create();
+        process.env.MONGO_URI = mongoServer.getUri();
+      }
       await mongoose.connect(uri, opts);
       console.log('MongoDB connected');
       return mongoose.connection;
