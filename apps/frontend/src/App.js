@@ -1,12 +1,28 @@
+import StatisticsPage from './pages/statistics';
+import SettingsPage from './pages/settings';
 // Main React App
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
+import Dashboard from './pages/dashboard';
+import PaymentHistoryPage from './pages/payments';
+import WasteHistoryPage from './pages/history';
+import { AuthProvider } from './components/context/AuthContext';
 
 function App() {
   return (
-    <div>
-      <Home />
-    </div>
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/resident/payments" element={<PaymentHistoryPage />} />
+          <Route path="/resident/history" element={<WasteHistoryPage />} />
+          <Route path="/resident/settings" element={<SettingsPage />} />
+          <Route path="/resident/statistics" element={<StatisticsPage />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }
 

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('./model');
+const WasteRecord = require('../../models/WasteRecord');
 
 async function listUsers(_req, res) {
   const users = await User.find({}, { passwordHash: 0 }).sort({ createdAt: -1 });
@@ -16,4 +17,15 @@ async function createUser(req, res) {
   res.status(201).json({ id: user._id, email: user.email, name: user.name, role: user.role });
 }
 
-module.exports = { listUsers, createUser };
+async function getWasteHistory(req, res) {
+  try {
+    // Assume req.user.id is set by auth middleware
+    const residentId = req.user.id;
+    const history = await WasteRecord.find({ residentId }).sort({ scheduledDate: -1 });
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch waste history.' });
+  }
+}
+
+module.exports = { listUsers, createUser, getWasteHistory };
