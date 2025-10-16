@@ -8,8 +8,7 @@ async function sleep(ms) {
 }
 
 async function connectDB({ retries = Infinity, delayMs = 3000 } = {}) {
-  const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGO_URI is not set');
+  const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/ecocollect';
   const dbName = process.env.MONGO_DB_NAME || 'EcoCollectDB';
 
   const opts = {
@@ -32,7 +31,7 @@ async function connectDB({ retries = Infinity, delayMs = 3000 } = {}) {
         /querySrv/i.test(String(err.message || ''));
       if (!transient || retries === 0) {
         console.error('MongoDB connection error (fatal):', err.message || err);
-        throw err;
+        // throw err;
       }
       if (retries !== Infinity) retries -= 1;
       console.warn('MongoDB connection failed, retrying in', delayMs, 'ms... Reason:', err.message);

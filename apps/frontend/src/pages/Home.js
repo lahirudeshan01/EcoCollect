@@ -1,10 +1,12 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 // EcoCollect Home Page
 // Single-file React component styled with Tailwind CSS
 // Drop this component into a React app (create-react-app, Next.js, Vite) with Tailwind configured.
 
-export default function EcoCollectHome({ onNavigate }) {
+export default function EcoCollectHome() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white text-gray-900 antialiased">
       {/* NAV */}
@@ -24,13 +26,13 @@ export default function EcoCollectHome({ onNavigate }) {
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
           <a className="hover:text-emerald-600 transition">How it works</a>
           <a className="hover:text-emerald-600 transition">Features</a>
-          <a className="hover:text-emerald-600 transition">For Residents</a>
-          <a onClick={() => onNavigate('login')} className="hover:text-emerald-600 transition cursor-pointer">For Authorities</a>
+          <a onClick={() => navigate('/pinithi-dashboard')} className="hover:text-emerald-600 transition cursor-pointer">For Residents</a>
+          <a onClick={() => navigate('/authority/login')} className="hover:text-emerald-600 transition cursor-pointer">For Authorities</a>
           <a className="hover:text-emerald-600 transition">Docs</a>
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          <button className="px-4 py-2 rounded-md text-sm font-semibold">Sign in</button>
+          <button onClick={() => navigate('/login')} className="px-4 py-2 rounded-md text-sm font-semibold">Sign in</button>
           <button className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold shadow hover:shadow-lg transition">Get Started</button>
         </div>
 

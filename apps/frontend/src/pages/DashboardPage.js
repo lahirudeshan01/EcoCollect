@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Icons for the dashboard
 const TruckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 3H15V17H1V3Z" stroke="#10B981" strokeWidth="1.5" /><path d="M15 8H23L19 12H15" stroke="#10B981" strokeWidth="1.5" /><circle cx="6" cy="20" r="2" stroke="#10B981" strokeWidth="1.5" /><circle cx="18" cy="20" r="2" stroke="#10B981" strokeWidth="1.5" /></svg>;
@@ -6,12 +7,13 @@ const RouteIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const CollectionIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 10L12 14L16 10" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="4" width="18" height="16" rx="2" stroke="#10B981" strokeWidth="1.5" /></svg>;
 const DistanceIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7.00005L12 11L20 7" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 12.0001L12 16L20 12" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 
-export default function DashboardPage({ onNavigate }) {
+export default function DashboardPage() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-md flex flex-col">
-        <div onClick={() => onNavigate('home')} className="p-6 flex items-center gap-4 border-b cursor-pointer">
+        <div onClick={() => navigate('/')} className="p-6 flex items-center gap-4 border-b cursor-pointer">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-md">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 12h4l2-3 3 6 3-8 4 8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -24,8 +26,8 @@ export default function DashboardPage({ onNavigate }) {
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <a href="#" className="flex items-center gap-3 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold">Dashboard</a>
-          <a href="#" onClick={() => onNavigate('routes')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Routes</a>
-          <a href="#" onClick={() => onNavigate('route-details')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Route Details</a>
+          <a href="#" onClick={() => navigate('/routes')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Routes</a>
+          <a href="#" onClick={() => navigate('/route-details')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Route Details</a>
         </nav>
       </aside>
 
@@ -35,7 +37,7 @@ export default function DashboardPage({ onNavigate }) {
         <header className="bg-white shadow-sm p-4 flex justify-between items-center">
           <h1 className="text-xl font-semibold">Operations Overview</h1>
           <div className="flex items-center gap-4">
-            <button onClick={() => onNavigate('routes')} className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold shadow hover:shadow-lg transition">Go to Route Optimization</button>
+            <button onClick={() => navigate('/routes')} className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold shadow hover:shadow-lg transition">Go to Route Optimization</button>
           </div>
         </header>
 

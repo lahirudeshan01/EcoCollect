@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Placeholder for a map component
 const MapPlaceholder = () => (
@@ -7,12 +8,13 @@ const MapPlaceholder = () => (
   </div>
 );
 
-export default function RouteOptimizationPage({ onNavigate }) {
+export default function RouteOptimizationPage() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-md flex flex-col">
-        <div onClick={() => onNavigate('home')} className="p-6 flex items-center gap-4 border-b cursor-pointer">
+        <div onClick={() => navigate('/')} className="p-6 flex items-center gap-4 border-b cursor-pointer">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-md">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 12h4l2-3 3 6 3-8 4 8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -24,9 +26,9 @@ export default function RouteOptimizationPage({ onNavigate }) {
           </div>
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          <a href="#" onClick={() => onNavigate('dashboard')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Dashboard</a>
-          <a href="#" onClick={() => onNavigate('routes')} className="flex items-center gap-3 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold">Routes</a>
-          <a href="#" onClick={() => onNavigate('route-details')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Route Details</a>
+          <a href="#" onClick={() => navigate('/dashboard')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Dashboard</a>
+          <a href="#" onClick={() => navigate('/routes')} className="flex items-center gap-3 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold">Routes</a>
+          <a href="#" onClick={() => navigate('/route-details')} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100">Route Details</a>
         </nav>
       </aside>
 
@@ -77,7 +79,7 @@ export default function RouteOptimizationPage({ onNavigate }) {
                     </thead>
                     <tbody>
                         <tr className="bg-white border-b">
-                            <td onClick={() => onNavigate('route-details')} className="px-6 py-4 font-medium text-emerald-600 hover:underline cursor-pointer">R-101</td>
+                            <td onClick={() => navigate('/route-details')} className="px-6 py-4 font-medium text-emerald-600 hover:underline cursor-pointer">R-101</td>
                             <td className="px-6 py-4">T-05</td>
                             <td className="px-6 py-4">23</td>
                             <td className="px-6 py-4">12.5 km</td>

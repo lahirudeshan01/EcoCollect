@@ -4,6 +4,7 @@ const router = Router();
 
 // Feature subroutes
 try { router.use('/auth', require('./auth/routes')); } catch {}
+try { router.use('/authorities', require('./auth/authorityRoutes')); } catch {}
 try { router.use('/users', require('./users/routes')); } catch {}
 // try { router.use('/configuration', require('./configuration/routes')); } catch {}
 // try { router.use('/routes', require('./routes/routes')); } catch {}

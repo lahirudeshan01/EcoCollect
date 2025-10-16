@@ -1,6 +1,10 @@
-// Backend routes entry
 const express = require('express');
 const router = express.Router();
+const authRoutes = require('../features/auth/routes');
+const authorityRoutes = require('../features/auth/authorityRoutes');
+
+router.use('/auth', authRoutes);
+router.use('/authorities', authorityRoutes);
 
 // Example route
 router.get('/', (req, res) => {
