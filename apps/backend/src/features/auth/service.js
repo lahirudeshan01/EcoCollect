@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('./model');
+const { httpError } = require('../../utils/httpError');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -16,16 +17,18 @@ async function loginUser(email, password) {
 }
 
 // Generic bearer token extractor and verifier
-function protect(req, res, next) {
+function protect(req, _res, next) {
+  // Only read the JWT from the HttpOnly cookie in production flow
   try {
-    const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    const token = req.cookies?.ecocollect_token;
+  // read token from cookie
+    if (!token) throw httpError(401, 'Unauthorized');
     const payload = jwt.verify(token, JWT_SECRET);
     req.user = payload;
-    next();
-  } catch (_e) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return next();
+  } catch (e) {
+    // Normalize JWT errors to 401
+    throw httpError(401, 'Unauthorized');
   }
 }
 
@@ -33,28 +36,18 @@ function protect(req, res, next) {
 function requireRole(roles = []) {
   if (typeof roles === 'string') roles = [roles];
   const want = roles.map(r => String(r).toUpperCase());
-  return (req, res, next) => {
-    if (!req.user) {
-      try {
-        const header = req.headers.authorization || '';
-        const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-        if (!token) return res.status(401).json({ message: 'Unauthorized' });
-        const payload = jwt.verify(token, JWT_SECRET);
-        req.user = payload;
-      } catch (_e) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-    }
+  return (req, _res, next) => {
+    if (!req.user) throw httpError(401, 'Unauthorized');
     const actual = String(req.user.role || '').toUpperCase();
-    if (want.length && !want.includes(actual)) return res.status(403).json({ message: 'Forbidden' });
-    next();
+    if (want.length && !want.includes(actual)) throw httpError(403, 'Forbidden');
+    return next();
   };
 }
 
-function adminOnly(req, res, next) {
-  if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-  if (String(req.user.role).toUpperCase() !== 'ADMIN') return res.status(403).json({ message: 'Forbidden' });
-  next();
+function adminOnly(req, _res, next) {
+  if (!req.user) throw httpError(401, 'Unauthorized');
+  if (String(req.user.role).toUpperCase() !== 'ADMIN') throw httpError(403, 'Forbidden');
+  return next();
 }
 
 module.exports = { loginUser, protect, requireRole, adminOnly };

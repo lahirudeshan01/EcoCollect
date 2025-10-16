@@ -26,28 +26,23 @@ export default function ResidentDashboardPage() {
   // Simple role-aware nav content
   const nav = useMemo(() => ({ email, role: role.toUpperCase() || 'USER' }), [email, role]);
 
-  // Protect route: require token and USER role; redirect ADMINs to /settings
+  // Protect route: require session and USER role; redirect ADMINs to /settings
   useEffect(() => {
-    const token = localStorage.getItem('ecocollect_token');
-    const storedRole = localStorage.getItem('ecocollect_role') || '';
-    const storedEmail = localStorage.getItem('ecocollect_email') || '';
-    setRole(storedRole);
-    setEmail(storedEmail);
-    const upper = String(storedRole).toUpperCase();
-    if (!token) {
-      router.replace('/login' as any);
-      return;
-    }
-    if (upper === 'ADMIN') {
-      router.replace('/settings' as any);
-      return;
-    }
+    (async () => {
+      try {
+        const me = await fetch(`${API_BASE}/auth/session`, { credentials: 'include' });
+        if (!me.ok) { router.replace('/login' as any); return; }
+        const m = await me.json();
+        const upper = String(m?.role || '').toUpperCase();
+        if (upper === 'ADMIN') { router.replace('/settings' as any); return; }
+        setRole(upper);
+        setEmail(m?.email || '');
+      } catch { router.replace('/login' as any); return; }
+    })();
     // Fetch account info
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/accounts/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(`${API_BASE}/accounts/me`, { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch account');
         const data = await res.json();
         setAcct(data);
@@ -64,13 +59,14 @@ export default function ResidentDashboardPage() {
     setMessage(null);
     setError(null);
     try {
-      const token = localStorage.getItem('ecocollect_token');
+      const csrf = await (await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' })).json();
       const res = await fetch(`${API_BASE}/accounts/pickups`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'X-CSRF-Token': csrf?.csrfToken || '',
         },
+        credentials: 'include',
         body: JSON.stringify({ date: pickDate, notes }),
       });
       const data = await res.json();
@@ -86,11 +82,17 @@ export default function ResidentDashboardPage() {
 
   const pickups = acct?.pickups || [];
 
-  function logout() {
-    localStorage.removeItem('ecocollect_token');
-    localStorage.removeItem('ecocollect_role');
-    localStorage.removeItem('ecocollect_email');
-    router.replace('/login' as any);
+  async function logout() {
+    try {
+      const csrf = await (await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' })).json();
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrf?.csrfToken || '' },
+        credentials: 'include',
+      });
+    } finally {
+      router.replace('/login' as any);
+    }
   }
 
   return (

@@ -16,20 +16,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/settings/page.js"
     ],
-    "/(resident)/dashboard/page": [
+    "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(resident)/dashboard/page.js"
-    ],
-    "/(manager)/routes/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(manager)/routes/page.js"
-    ],
-    "/(staff)/scan/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(staff)/scan/page.js"
+      "static/chunks/app/login/page.js"
     ]
   }
 }
