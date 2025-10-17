@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@ecocollect/ui';
 import config from '@ecocollect/config';
+import Navigation from '../../components/Navigation';
 
 const { API_BASE } = config;
 
@@ -15,16 +16,13 @@ type Account = {
 export default function ResidentDashboardPage() {
   const router = useRouter();
   const [email, setEmail] = useState<string>('');
-  const [role, setRole] = useState<string>('');
+  const [role, setRole] = useState<'ADMIN' | 'MANAGER' | 'RESIDENT' | 'STAFF' | 'USER'>('USER');
   const [acct, setAcct] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [pickDate, setPickDate] = useState('');
   const [notes, setNotes] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Simple role-aware nav content
-  const nav = useMemo(() => ({ email, role: role.toUpperCase() || 'USER' }), [email, role]);
 
   // Protect route: require session and USER role; redirect ADMINs to /settings
   useEffect(() => {
@@ -33,7 +31,7 @@ export default function ResidentDashboardPage() {
         const me = await fetch(`${API_BASE}/auth/session`, { credentials: 'include' });
         if (!me.ok) { router.replace('/login' as any); return; }
         const m = await me.json();
-        const upper = String(m?.role || '').toUpperCase();
+        const upper = String(m?.role || '').toUpperCase() as 'ADMIN' | 'MANAGER' | 'RESIDENT' | 'STAFF' | 'USER';
         if (upper === 'ADMIN') { router.replace('/settings' as any); return; }
         setRole(upper);
         setEmail(m?.email || '');
@@ -82,30 +80,20 @@ export default function ResidentDashboardPage() {
 
   const pickups = acct?.pickups || [];
 
-  async function logout() {
-    try {
-      const csrf = await (await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' })).json();
-      await fetch(`${API_BASE}/auth/logout`, {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrf?.csrfToken || '' },
-        credentials: 'include',
-      });
-    } finally {
-      router.replace('/login' as any);
-    }
-  }
-
   return (
-    <main className="mx-auto max-w-4xl p-6 space-y-6">
-      {/* Nav */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          Signed in as <span className="font-medium text-gray-900">{nav.email || 'user'}</span> · Role: <span className="font-medium">{nav.role}</span>
+    <>
+      <Navigation email={email} role={role} currentPage="/dashboard" />
+      <main className="mx-auto max-w-4xl p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+            Welcome, {email || 'Resident'}!
+          </h1>
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
+              Balance: ${acct?.balance || 0}
+            </div>
+          </div>
         </div>
-        <Button variant="secondary" onClick={logout}>Logout</Button>
-      </div>
-
-      <h1 className="text-2xl font-semibold">Welcome, {email || 'Resident'}!</h1>
 
       {loading ? (
         <div className="text-gray-600">Loading your account…</div>
@@ -171,6 +159,7 @@ export default function ResidentDashboardPage() {
           </section>
         </>
       )}
-    </main>
+      </main>
+    </>
   );
 }

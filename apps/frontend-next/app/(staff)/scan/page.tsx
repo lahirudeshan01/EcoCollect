@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@ecocollect/ui';
 import toast from 'react-hot-toast';
 import { submitScan } from '../../utils/api';
+import Navigation from '../../components/Navigation';
 import { 
   addScan, 
   getAllScans, 
@@ -11,6 +12,8 @@ import {
   syncAll, 
   initAutoSync 
 } from '../../utils/offlineQueue';
+import config from '@ecocollect/config';
+const { API_BASE } = config;
 
 // TypeScript declaration for jsQR loaded via CDN
 declare global {
@@ -25,6 +28,8 @@ export default function StaffScanPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
   
+  const [email, setEmail] = useState<string>('');
+  const [role, setRole] = useState<'ADMIN' | 'MANAGER' | 'RESIDENT' | 'STAFF' | 'USER'>('USER');
   const [scanning, setScanning] = useState(false);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
   const [queueLength, setQueueLength] = useState(0);
@@ -33,6 +38,20 @@ export default function StaffScanPage() {
   
   // Prevent duplicate scans of the same QR code
   const lastResultRef = useRef<string | null>(null);
+
+  // Check session
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await fetch(`${API_BASE}/auth/session`, { credentials: 'include' });
+        if (!me.ok) { router.replace('/login' as any); return; }
+        const data = await me.json();
+        const upper = String(data?.role || '').toUpperCase() as 'ADMIN' | 'MANAGER' | 'RESIDENT' | 'STAFF' | 'USER';
+        setRole(upper);
+        setEmail(data?.email || '');
+      } catch { router.replace('/login' as any); }
+    })();
+  }, [router]);
 
   // Initialize auto-sync on mount
   useEffect(() => {
@@ -221,14 +240,25 @@ export default function StaffScanPage() {
   }, []);
 
   return (
-    <main className="max-w-2xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">QR Scanner</h1>
-        <Button onClick={() => router.push('/')}>Back to Home</Button>
-      </div>
+    <>
+      <Navigation email={email} role={role} currentPage="/scan" />
+      <main className="max-w-3xl mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            QR Scanner
+          </h1>
+          {queueLength > 0 && (
+            <div className="px-4 py-2 rounded-full bg-amber-100 text-amber-700 text-sm font-medium flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {queueLength} pending
+            </div>
+          )}
+        </div>
 
-      {/* Camera/Scanner Area */}
+        {/* Camera/Scanner Area */}
       <div className="rounded-lg border bg-white p-4 shadow-sm">
         <div className="space-y-4">
           {!scanning ? (
@@ -323,6 +353,7 @@ export default function StaffScanPage() {
           <li>If offline, scans are queued and synced later</li>
         </ul>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
