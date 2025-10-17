@@ -7,7 +7,10 @@
     "dev": "node src/server.js",
     "build": "echo backend build",
     "smoke": "node scripts/smoke-auth.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "config:view": "node scripts/view-config.js",
+    "config:edit": "node scripts/edit-config.js",
+    "config:reset": "node scripts/reset-config.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

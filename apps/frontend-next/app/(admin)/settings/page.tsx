@@ -16,12 +16,20 @@ export default function AdminSettingsPage() {
   const router = useRouter();
   const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [billingName, setBillingName] = useState('');
-  const [billingRate, setBillingRate] = useState<string>('');
-  const [wasteCategoriesText, setWasteCategoriesText] = useState('');
+  // Billing models list + add form inputs
+  const [billingModels, setBillingModels] = useState<Array<{ name: string; rate: number }>>([]);
+  const [bmName, setBmName] = useState('');
+  const [bmRate, setBmRate] = useState('');
+  // Waste categories list + add form inputs
+  const [wasteCategories, setWasteCategories] = useState<Array<{ key: string; label: string }>>([]);
+  const [catKey, setCatKey] = useState('');
+  const [catLabel, setCatLabel] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // Reset modal
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     // verify session is ADMIN
@@ -33,56 +41,37 @@ export default function AdminSettingsPage() {
         if (String(data?.role).toUpperCase() !== 'ADMIN') { router.replace('/login' as any); return; }
         setEmail(data?.email || '');
       } catch { router.replace('/login' as any); return; }
-      // Fetch current config
-      try {
-        const res = await fetch(`${API_BASE}/configuration`, {
-          credentials: 'include',
-        });
-        if (!res.ok) throw new Error('Failed to load configuration');
-        const data: SystemConfig = await res.json();
-        const bm = data.billingModels?.[0] || {};
-        setBillingName(bm.name || '');
-        setBillingRate(
-          typeof bm.rate === 'number' && !Number.isNaN(bm.rate) ? String(bm.rate) : ''
-        );
-        const wc = (data.wasteCategories || [])
-          .map(c => `${c.key || ''}:${c.label || ''}`.trim())
-          .filter(Boolean)
-          .join('\n');
-        setWasteCategoriesText(wc);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load configuration');
-      } finally {
-        setLoading(false);
-      }
+      await fetchConfig();
     })();
   }, [router]);
+
+  async function fetchConfig() {
+    try {
+      const res = await fetch(`${API_BASE}/configuration`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to load configuration');
+      const data: SystemConfig = await res.json();
+      const bms = (data.billingModels || [])
+        .map((b) => ({ name: String(b?.name || ''), rate: Number(b?.rate || 0) }))
+        .filter((b) => b.name.trim().length > 0);
+      setBillingModels(bms);
+      setWasteCategories((data.wasteCategories || []).map((c) => ({ key: String(c?.key || ''), label: String(c?.label || '') })).filter((c) => c.key.trim().length > 0));
+    } catch (e: any) {
+      setError(e.message || 'Failed to load configuration');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function onSave() {
     setSaving(true);
     setError(null);
     setMessage(null);
     try {
-      // Parse waste categories from textarea: lines of key:label
-      const categories = wasteCategoriesText
-        .split(/\r?\n/) // split lines
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(line => {
-          const [key, ...rest] = line.split(':');
-          return { key: (key || '').trim(), label: rest.join(':').trim() };
-        })
-        .filter(c => c.key);
-
-      const rateNum = billingRate ? Number(billingRate) : undefined;
       const payload: SystemConfig = {
-        billingModels: [
-          {
-            name: billingName || undefined,
-            rate: typeof rateNum === 'number' && !Number.isNaN(rateNum) ? rateNum : undefined,
-          },
-        ],
-        wasteCategories: categories,
+        billingModels: billingModels.map(b => ({ name: b.name, rate: b.rate })),
+        wasteCategories: wasteCategories.map(c => ({ key: c.key, label: c.label })),
       };
       const csrf = await (await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' })).json();
       const res = await fetch(`${API_BASE}/configuration`, {
@@ -100,11 +89,70 @@ export default function AdminSettingsPage() {
       }
       setMessage('Settings saved');
       toast.success('Settings saved successfully!', { duration: 3000, icon: '✅' });
+      await fetchConfig();
     } catch (e: any) {
       setError(e.message || 'Failed to save');
       toast.error(e.message || 'Failed to save', { duration: 4000 });
     } finally {
       setSaving(false);
+    }
+  }
+
+  function removeBilling(index: number) {
+    setBillingModels((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function addBilling() {
+    const name = bmName.trim();
+    const rateNum = Number(bmRate);
+    if (!name) { toast.error('Billing model name is required'); return; }
+    if (!Number.isFinite(rateNum) || rateNum < 0) { toast.error('Rate must be a non-negative number'); return; }
+    setBillingModels((prev) => [...prev, { name, rate: rateNum }]);
+    setBmName('');
+    setBmRate('');
+  }
+
+  function removeCategory(index: number) {
+    setWasteCategories((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function addCategory() {
+    const key = catKey.trim();
+    const label = catLabel.trim();
+    if (!key) { toast.error('Category key is required'); return; }
+    if (!label) { toast.error('Category label is required'); return; }
+    if (wasteCategories.some((c) => c.key.toLowerCase() === key.toLowerCase())) {
+      toast.error('Category key already exists');
+      return;
+    }
+    setWasteCategories((prev) => [...prev, { key, label }]);
+    setCatKey('');
+    setCatLabel('');
+  }
+
+  async function onResetDefaults() {
+    setResetting(true);
+    try {
+      const csrf = await (await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' })).json();
+      const res = await fetch(`${API_BASE}/configuration`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrf?.csrfToken || '' },
+        credentials: 'include',
+      });
+      if (!res.ok && res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || 'Failed to reset');
+      }
+      toast.success('Settings reset to defaults');
+      setConfirmReset(false);
+      setMessage(null);
+      setError(null);
+      setLoading(true);
+      await fetchConfig();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to reset');
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -138,7 +186,7 @@ export default function AdminSettingsPage() {
           </div>
         ) : (
           <div className="space-y-6 animate-fade-in-up">
-            {/* Billing Model Card */}
+            {/* Billing Models Card */}
             <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 transition-all duration-300 hover:shadow-2xl border border-gray-100">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
@@ -146,35 +194,64 @@ export default function AdminSettingsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900">Billing Model</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Billing Models</h2>
               </div>
               <div className="space-y-5">
-                <div className="group">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
-                    Model Name
-                  </label>
-                  <input
-                    className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none hover:border-gray-300"
-                    placeholder="e.g., Flat Rate, Weight-Based"
-                    value={billingName}
-                    onChange={(e) => setBillingName(e.target.value)}
-                  />
-                </div>
-                <div className="group">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
-                    Rate (per unit)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                {/* Existing models list */}
+                {billingModels.length === 0 ? (
+                  <p className="text-sm text-gray-600">No billing models yet. Add one below.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {billingModels.map((bm, idx) => (
+                      <li key={`${bm.name}-${idx}`} className="flex items-center justify-between rounded-lg border-2 border-gray-200 px-4 py-2">
+                        <div className="text-sm font-medium text-gray-900">
+                          {bm.name} <span className="text-gray-500">·</span> <span className="text-emerald-700 font-semibold">${bm.rate}</span>
+                        </div>
+                        <button
+                          onClick={() => removeBilling(idx)}
+                          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-red-700 hover:text-white hover:bg-red-600 border-2 border-red-200 transition-colors"
+                          title="Remove billing model"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Add new model */}
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+                  <div className="sm:col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Model Name</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="w-full rounded-xl border-2 border-gray-200 pl-8 pr-4 py-3 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none hover:border-gray-300"
-                      placeholder="0.00"
-                      value={billingRate}
-                      onChange={(e) => setBillingRate(e.target.value)}
+                      className="w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none hover:border-gray-300"
+                      placeholder="e.g., Flat Fee, Weight-Based"
+                      value={bmName}
+                      onChange={(e) => setBmName(e.target.value)}
                     />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rate</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="w-full rounded-xl border-2 border-gray-200 pl-7 pr-3 py-2.5 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none hover:border-gray-300"
+                        placeholder="0.00"
+                        value={bmRate}
+                        onChange={(e) => setBmRate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="sm:col-span-5">
+                    <button
+                      onClick={addBilling}
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:from-emerald-700 hover:to-teal-700 shadow-md hover:shadow-lg transition-all"
+                    >
+                      Add Billing Model
+                    </button>
                   </div>
                 </div>
               </div>
@@ -190,22 +267,57 @@ export default function AdminSettingsPage() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-900">Waste Categories</h2>
-                  <p className="text-xs text-gray-500 mt-1">Enter one category per line in format: key:label</p>
+                  <p className="text-xs text-gray-500 mt-1">Manage category key/label pairs</p>
                 </div>
               </div>
-              <div className="group">
-                <textarea
-                  className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 font-mono text-sm transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none hover:border-gray-300 resize-none"
-                  rows={8}
-                  placeholder={"recyclables:Recyclables\norganic:Organic Waste\ngeneral:General Waste\ne-waste:Electronic Waste"}
-                  value={wasteCategoriesText}
-                  onChange={(e) => setWasteCategoriesText(e.target.value)}
-                />
-                <div className="mt-2 flex items-start gap-2 text-xs text-gray-500">
-                  <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  <span>Example: <code className="bg-gray-100 px-1.5 py-0.5 rounded">recyclables:Recyclables</code></span>
+              {/* Existing categories list */}
+              {wasteCategories.length === 0 ? (
+                <p className="text-sm text-gray-600">No categories yet. Add one below.</p>
+              ) : (
+                <ul className="space-y-2 mb-4">
+                  {wasteCategories.map((c, idx) => (
+                    <li key={`${c.key}-${idx}`} className="flex items-center justify-between rounded-lg border-2 border-gray-200 px-4 py-2">
+                      <div className="text-sm font-medium text-gray-900">
+                        <span className="text-gray-500">{c.key}</span> <span className="text-gray-400">→</span> {c.label}
+                      </div>
+                      <button
+                        onClick={() => removeCategory(idx)}
+                        className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-red-700 hover:text-white hover:bg-red-600 border-2 border-red-200 transition-colors"
+                        title="Remove category"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {/* Add new category */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Key</label>
+                  <input
+                    className="w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none hover:border-gray-300"
+                    placeholder="e.g., plastic"
+                    value={catKey}
+                    onChange={(e) => setCatKey(e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Label</label>
+                  <input
+                    className="w-full rounded-xl border-2 border-gray-200 px-4 py-2.5 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 focus:outline-none hover:border-gray-300"
+                    placeholder="e.g., Plastic"
+                    value={catLabel}
+                    onChange={(e) => setCatLabel(e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-5">
+                  <button
+                    onClick={addCategory}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-semibold text-white hover:from-amber-600 hover:to-orange-700 shadow-md hover:shadow-lg transition-all"
+                  >
+                    Add Category
+                  </button>
                 </div>
               </div>
             </div>
@@ -228,8 +340,14 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* Action Button */}
-            <div className="flex justify-end pt-4">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between gap-3 pt-4">
+              <button
+                onClick={() => setConfirmReset(true)}
+                className="inline-flex items-center gap-2 rounded-xl border-2 border-red-200 text-red-700 hover:text-white hover:bg-red-600 px-5 py-2.5 text-sm font-semibold transition-all"
+              >
+                Reset to Defaults
+              </button>
               <button
                 onClick={onSave}
                 disabled={saving}
@@ -256,6 +374,46 @@ export default function AdminSettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Confirm Reset Modal */}
+      {confirmReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !resetting && setConfirmReset(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Reset to Defaults</h3>
+            </div>
+            <p className="text-sm text-gray-700 mb-4">Are you sure you want to reset all settings? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmReset(false)}
+                disabled={resetting}
+                className="rounded-xl border-2 border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onResetDefaults}
+                disabled={resetting}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {resetting && (
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                Confirm Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes fade-in {
