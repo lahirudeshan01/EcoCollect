@@ -1,22 +1,17 @@
-// Main React App
-import React, { useState } from 'react';
+// Main React App with tiny hash router to support Scan QR page
+import React, { useEffect, useState } from 'react';
 import Home from './pages/Home';
 import ScanQR from './pages/ScanQR';
 
-function App() {
-  const [route, setRoute] = useState('home');
+export default function App() {
+  const [route, setRoute] = useState(window.location.hash || '#/');
 
-  return (
-    <div>
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-end">
-        <button onClick={() => setRoute('home')} className="mr-3 px-3 py-1 rounded bg-gray-100">Home</button>
-        <button onClick={() => setRoute('scan')} className="px-3 py-1 rounded bg-emerald-600 text-white">Scan QR</button>
-      </div>
+  useEffect(() => {
+    const onHash = () => setRoute(window.location.hash || '#/');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
-      {route === 'home' && <Home />}
-      {route === 'scan' && <ScanQR />}
-    </div>
-  );
+  if (route.startsWith('#/scan')) return <ScanQR />;
+  return <Home />;
 }
-
-export default App;

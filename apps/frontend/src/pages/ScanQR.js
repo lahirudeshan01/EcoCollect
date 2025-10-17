@@ -1,109 +1,113 @@
-import React, { useRef, useEffect, useState } from 'react';
-import offline, { saveScan, syncPendingScans, initOfflineSync } from '../lib/offline';
+import React, { useEffect, useRef, useState } from 'react';
+import { addScan, getQueueLength, syncAll, getAllScans } from '../lib/offlineQueue';
 
 export default function ScanQR() {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [message, setMessage] = useState('Initializing camera...');
-  const [scanning, setScanning] = useState(true);
+	const videoRef = useRef(null);
+	const canvasRef = useRef(null);
+	const [scanning, setScanning] = useState(false);
+	const [lastResult, setLastResult] = useState(null);
+	const [queueLength, setQueueLength] = useState(0);
 
-  useEffect(() => {
-    const stopSync = initOfflineSync({ intervalMs: 20000 });
-    let stream;
-    const start = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.setAttribute('playsinline', true); // required to tell iOS safari we don't want fullscreen
-          await videoRef.current.play();
-          requestAnimationFrame(() => { doTick(); });
-          setMessage('Point the camera at a QR code');
-        }
-      } catch (err) {
-        console.error(err);
-        setMessage('Camera access denied or not available');
-      }
-    };
+	useEffect(() => {
+		// load current queue length
+		(async () => {
+			try {
+				const len = await getQueueLength();
+				setQueueLength(len);
+			} catch (e) {
+				console.warn('failed to read queue length', e);
+			}
+		})();
 
-    const doTick = async () => {
-      if (!scanning) return;
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      if (video && canvas) {
-        const width = video.videoWidth;
-        const height = video.videoHeight;
-        if (width === 0 || height === 0) {
-          requestAnimationFrame(() => { doTick(); });
-          return;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, width, height);
-        try {
-          const imageData = ctx.getImageData(0, 0, width, height);
-          // jsQR is expected to be available on window.jsQR via CDN
-          const code = window.jsQR ? window.jsQR(imageData.data, width, height) : null;
-          if (code) {
-            setMessage('QR detected: ' + code.data);
-            setScanning(false);
-            const payload = { binId: code.data, collectorId: 'web-collector', timestamp: new Date().toISOString() };
-            // Try to POST immediately; if fails, save offline
-            try {
-              const res = await fetch('/api/collections/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-              if (!res.ok) throw new Error('Network response not ok');
-              setMessage('Scan submitted');
-            } catch (err) {
-              // Save locally for later sync
-              await saveScan({ payload });
-              setMessage('Saved offline — will sync when online');
-            }
-          }
-        } catch (e) {
-          // imageData may throw if canvas tainted; ignore gracefully
-        }
-      }
-      requestAnimationFrame(() => { doTick(); });
-    };
+		let animationId;
+		let stream;
 
-    start();
+		async function start() {
+			setScanning(true);
+			try {
+				stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+				if (videoRef.current) videoRef.current.srcObject = stream;
+				if (videoRef.current) await videoRef.current.play();
 
-    return () => {
-      setScanning(false);
-      stopSync && stopSync();
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-      }
-    };
-  }, [scanning]);
+				const canvas = canvasRef.current;
+				const ctx = canvas.getContext('2d');
 
-  // Optional: UI action to force sync now
-  const handleSyncNow = async () => {
-    setMessage('Syncing pending...');
-    const r = await syncPendingScans();
-    setMessage('Synced ' + (r.synced || 0) + ' scans');
-  };
+				const tick = async () => {
+					if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
+						animationId = requestAnimationFrame(tick);
+						return;
+					}
+					canvas.width = videoRef.current.videoWidth;
+					canvas.height = videoRef.current.videoHeight;
+					ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
-  return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-start p-6">
-      <h2 className="text-2xl font-semibold mb-4">Scan QR Code</h2>
+					try {
+						const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+						const code = window.jsQR ? window.jsQR(imageData.data, imageData.width, imageData.height) : null;
+						if (code && code.data) {
+							if (code.data !== lastResult) {
+								setLastResult(code.data);
+								const payload = { binId: code.data, collectorId: 'FRONTEND-TEST-01' };
+								try {
+									const resp = await fetch('/api/collections/scan', {
+										method: 'POST',
+										headers: { 'Content-Type': 'application/json' },
+										body: JSON.stringify(payload),
+									});
+									if (!resp.ok) throw new Error('server error ' + resp.status);
+								} catch (err) {
+									console.warn('post scan failed, saving offline', err);
+									try { await addScan(payload); } catch (err2) { console.error('addScan failed', err2); }
+								} finally {
+									try { const len = await getQueueLength(); setQueueLength(len); } catch (e) {}
+								}
+							}
+						}
+					} catch (e) {
+						// ignore frame errors
+					}
 
-      <div className="w-full max-w-xl bg-gray-50 rounded-lg p-4 border">
-        <div className="relative" style={{paddingTop: '56.25%'}}>
-          <video ref={videoRef} style={{position: 'absolute', top:0, left:0, width:'100%', height:'100%'}} />
-          <canvas ref={canvasRef} style={{display: 'none'}} />
-        </div>
+					animationId = requestAnimationFrame(tick);
+				};
 
-        <div className="mt-4">
-          <div className="text-sm text-gray-600">{message}</div>
-          <div className="mt-3 flex gap-3">
-            <button onClick={() => { setScanning(true); setMessage('Resuming scan...'); }} className="px-3 py-1 rounded bg-emerald-600 text-white">Resume</button>
-            <button onClick={() => { setScanning(false); setMessage('Scan stopped'); }} className="px-3 py-1 rounded border">Stop</button>
-            <button onClick={handleSyncNow} className="px-3 py-1 rounded border">Sync Now</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+				tick();
+			} catch (err) {
+				console.error('camera start failed', err);
+			}
+		}
+
+		start();
+
+		return () => {
+			setScanning(false);
+			if (animationId) cancelAnimationFrame(animationId);
+			if (stream) stream.getTracks().forEach((t) => t.stop());
+		};
+	}, [lastResult]);
+
+	return (
+		<div className="min-h-screen flex flex-col items-center justify-start p-6">
+				<div className="w-full flex items-center justify-between mb-4">
+					<h2 className="text-2xl font-semibold">Scan QR (Collection Staff)</h2>
+					<button onClick={()=> { window.location.hash = '#/'; }} className="px-3 py-2 rounded border">Back</button>
+				</div>
+			<div className="w-full max-w-xl bg-white rounded-lg shadow p-4">
+				<div className="relative" style={{ paddingTop: '56.25%' }}>
+					<video ref={videoRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: 8 }} muted playsInline />
+					<canvas ref={canvasRef} style={{ display: 'none' }} />
+				</div>
+
+				<div className="mt-4">
+					<div className="text-sm text-gray-600">Status: {scanning ? 'Camera active' : 'Stopped'}</div>
+					<div className="mt-2">Last QR data: <span className="font-mono">{lastResult || '—'}</span></div>
+					<div className="mt-2">Offline queue: <span className="font-semibold">{queueLength}</span></div>
+					<div className="mt-3 flex gap-2">
+						<button className="px-3 py-2 rounded border" onClick={async ()=>{ const res = await syncAll(); console.log('syncAll',res); const len = await getQueueLength(); setQueueLength(len); }}>Sync Now</button>
+						<button className="px-3 py-2 rounded border" onClick={async ()=>{ const all = await getAllScans(); console.log('pending scans', all); alert('Pending: ' + all.length); }}>Show Pending</button>
+					</div>
+					<div className="mt-3 text-xs text-gray-500">Scanned data is posted to <code>/api/collections/scan</code> with a test collector id. If offline, scans are queued locally and auto-synced when online.</div>
+				</div>
+			</div>
+		</div>
+	);
 }
