@@ -16,6 +16,18 @@
 # Misc
 .DS_Store
 .env
+ 
+# Next.js build output
+**/.next/
+apps/frontend-next/.next/
+
+# Node modules (monorepo)
+**/node_modules/
+apps/**/node_modules/
+
+# Turborepo cache and logs
+.turbo/
+**/.turbo/
 .env.local
 .env.development.local
 .env.test.local
