@@ -42,12 +42,39 @@ function PaymentHistoryPage() {
       alert("Please fill in all required fields correctly.");
       return false;
     }
+
+    if (!/^[A-Za-z\s]+$/.test(residentName)) {
+      alert("Resident Name must contain only letters and spaces");
+      return false;
+    }
+
     if (paymentMethod === "card") {
-      if (!nameOnCard || !cardNumber || !expiry || !cvc || !billingAddress) {
+      if (!nameOnCard.trim() || !cardNumber || !expiry || !cvc || !billingAddress.trim()) {
         alert("Please fill in all card details.");
         return false;
       }
+
+      if (!/^[A-Za-z\s]+$/.test(nameOnCard)) {
+        alert("Name on Card must contain only letters and spaces");
+        return false;
+      }
+
+      if (!/^\d{16}$/.test(cardNumber.replace(/\s/g, ""))) {
+        alert("Card Number must be 16 digits");
+        return false;
+      }
+
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) {
+        alert("Expiry must be in MM/YY format");
+        return false;
+      }
+
+      if (!/^\d{3,4}$/.test(cvc)) {
+        alert("CVC must be 3 or 4 digits");
+        return false;
+      }
     }
+
     return true;
   };
 
@@ -72,7 +99,6 @@ function PaymentHistoryPage() {
     try {
       await addPayment(payload);
       alert("Payment added successfully!");
-      // Reset form
       setResidentName("");
       setAddress("");
       setDate("");
@@ -83,7 +109,7 @@ function PaymentHistoryPage() {
       setExpiry("");
       setCvc("");
       setBillingAddress("");
-      loadHistory(); // refresh list
+      loadHistory();
     } catch (err) {
       console.error(err);
       alert("Failed to add payment");
@@ -108,7 +134,12 @@ function PaymentHistoryPage() {
     }
   };
 
-  if (isLoading) return <Layout activeTab="Payment" variant="sidebar"><p className="p-8 text-lg">Loading...</p></Layout>;
+  if (isLoading)
+    return (
+      <Layout activeTab="Payment" variant="sidebar">
+        <p className="p-8 text-lg">Loading Payment History...</p>
+      </Layout>
+    );
 
   return (
     <Layout activeTab="Payment" variant="sidebar">
@@ -122,60 +153,160 @@ function PaymentHistoryPage() {
           <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleSubmit}>
             <div className="sm:col-span-2">
               <label>Resident Name</label>
-              <input className="mt-1 w-full border rounded-md px-3 py-2" value={residentName} onChange={e => setResidentName(e.target.value)} />
+              <input
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={residentName}
+                onChange={(e) => setResidentName(e.target.value)}
+              />
             </div>
             <div className="sm:col-span-2">
               <label>Address</label>
-              <input className="mt-1 w-full border rounded-md px-3 py-2" value={address} onChange={e => setAddress(e.target.value)} />
+              <input
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
             </div>
             <div>
               <label>Date</label>
-              <input type="date" className="mt-1 w-full border rounded-md px-3 py-2" value={date} onChange={e => setDate(e.target.value)} />
+              <input
+                type="date"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
             </div>
             <div>
               <label>Amount (Rs)</label>
-              <input type="number" className="mt-1 w-full border rounded-md px-3 py-2" value={amount} onChange={e => setAmount(e.target.value)} />
+              <input
+                type="number"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
             </div>
             <div className="sm:col-span-2">
               <label>Payment Method</label>
               <div className="flex gap-6 mt-2">
-                <label><input type="radio" value="card" checked={paymentMethod==="card"} onChange={() => setPaymentMethod("card")} /> Card</label>
-                <label><input type="radio" value="cash" checked={paymentMethod==="cash"} onChange={() => setPaymentMethod("cash")} /> Cash</label>
+                <label>
+                  <input
+                    type="radio"
+                    value="card"
+                    checked={paymentMethod === "card"}
+                    onChange={() => setPaymentMethod("card")}
+                  />{" "}
+                  Card
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="cash"
+                    checked={paymentMethod === "cash"}
+                    onChange={() => setPaymentMethod("cash")}
+                  />{" "}
+                  Cash
+                </label>
               </div>
             </div>
 
+            {/* Card Details */}
             {paymentMethod === "card" && (
               <>
-                <div className="sm:col-span-2 mt-4 pt-4 border-t">Card Details</div>
-                <div className="sm:col-span-2"><label>Name on Card</label><input value={nameOnCard} onChange={e => setNameOnCard(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" /></div>
-                <div className="sm:col-span-2"><label>Card Number</label><input value={cardNumber} onChange={e => setCardNumber(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" /></div>
-                <div><label>Expiry</label><input value={expiry} onChange={e => setExpiry(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" /></div>
-                <div><label>CVC</label><input value={cvc} onChange={e => setCvc(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" /></div>
-                <div className="sm:col-span-2"><label>Billing Address</label><input value={billingAddress} onChange={e => setBillingAddress(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" /></div>
+                <div className="sm:col-span-2 mt-4 pt-4 border-t font-semibold">Card Details</div>
+                <div className="sm:col-span-2">
+                  <label>Name on Card</label>
+                  <input
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    value={nameOnCard}
+                    onChange={(e) => setNameOnCard(e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label>Card Number</label>
+                  <input
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label>Expiry</label>
+                  <input
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label>CVC</label>
+                  <input
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    value={cvc}
+                    onChange={(e) => setCvc(e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label>Billing Address</label>
+                  <input
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    value={billingAddress}
+                    onChange={(e) => setBillingAddress(e.target.value)}
+                  />
+                </div>
               </>
             )}
 
             <div className="sm:col-span-2 mt-4">
-              <button type="submit" disabled={saving} className="px-5 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700">{saving ? "Saving..." : "Submit"}</button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-5 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Submit"}
+              </button>
             </div>
           </form>
         </div>
 
         {/* Payment History Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {history.length > 0 ? history.map(record => (
-            <div key={record._id} className={`rounded-xl shadow-lg p-6 flex flex-col gap-2 ${record.type==="Payback" ? "bg-green-50":"bg-white"}`}>
-              <div className="flex items-center justify-between">
-                <span>{record.type==="Payback"?"Recycling Credit":record.type}</span>
-                <div className="flex gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${record.status==="Paid"?"bg-blue-100 text-blue-700":"bg-yellow-100 text-yellow-700"}`}>{record.status}</span>
-                  <button onClick={() => handleDelete(record._id)} className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">Delete</button>
+          {history.length > 0 ? (
+            history.map((record) => (
+              <div
+                key={record._id}
+                className={`rounded-xl shadow-lg p-6 flex flex-col gap-2 ${
+                  record.type === "Payback" ? "bg-green-50" : "bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{record.type === "Payback" ? "Recycling Credit" : record.type}</span>
+                  <div className="flex gap-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        record.status === "Paid" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {record.status}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(record._id)}
+                      className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
+                <div className="text-2xl font-bold">
+                  {record.type === "Payback" ? `+${record.amount}` : `-${record.amount}`} Rs
+                </div>
+                <div className="text-sm text-gray-500">{record.date}</div>
               </div>
-              <div className="text-2xl font-bold">{record.type==="Payback"?`+${record.amount}`:`-${record.amount}`} Rs</div>
-              <div className="text-sm text-gray-500">{record.date}</div>
+            ))
+          ) : (
+            <div className="col-span-2 p-8 text-center text-gray-500 bg-white rounded-xl shadow">
+              No financial records found.
             </div>
-          )) : <div className="col-span-2 p-8 text-center text-gray-500 bg-white rounded-xl shadow">No financial records found.</div>}
+          )}
         </div>
       </div>
     </Layout>
