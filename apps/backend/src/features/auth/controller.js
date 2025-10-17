@@ -25,3 +25,37 @@ async function seedAdmin(req, res) {
 }
 
 module.exports = { login, seedAdmin };
+// --- New: seed resident for testing ---
+async function seedResident(req, res) {
+  const email = req.body?.email || 'resident@test.com';
+  const password = req.body?.password || '12345';
+  const name = req.body?.name || 'Resident User';
+  const role = 'user';
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = await User.findOneAndUpdate(
+    { email },
+    { email, name, passwordHash, role },
+    { new: true, upsert: true }
+  );
+  return res.json({ ok: true, email: user.email, role: user.role });
+}
+
+module.exports.seedResident = seedResident;
+
+// --- New: register resident ---
+async function register(req, res) {
+  try {
+    const { name, email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ message: 'email and password are required' });
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(409).json({ message: 'email already in use' });
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await User.create({ name: name || 'Resident', email, passwordHash, role: 'user' });
+    return res.status(201).json({ id: user._id, email: user.email, name: user.name });
+  } catch (err) {
+    console.error('Register error:', err);
+    return res.status(500).json({ message: 'Registration failed', detail: err?.message });
+  }
+}
+
+module.exports.register = register;

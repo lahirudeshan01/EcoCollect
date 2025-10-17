@@ -22,6 +22,10 @@ const WasteRecordSchema = new mongoose.Schema({
     weight: { // Weight recorded after collection
         type: Number
     },
+    notes: {
+        type: String,
+        trim: true
+    },
     isSpecialPickup: {
         type: Boolean,
         default: false

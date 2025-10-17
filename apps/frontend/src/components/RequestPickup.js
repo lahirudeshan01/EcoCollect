@@ -4,11 +4,12 @@ function RequestPickup({ onClose, onConfirm }) {
     const [wasteType, setWasteType] = useState('Bulky');
     const [date, setDate] = useState('');
     const [time, setTime] = useState('');
+    const [weight, setWeight] = useState('');
     const [notes, setNotes] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onConfirm({ wasteType, date, time, notes });
+        onConfirm({ wasteType, date, time, weight, notes });
         onClose();
     };
 
@@ -35,6 +36,18 @@ function RequestPickup({ onClose, onConfirm }) {
                         <option value="Bulky">Bulky (Sofa, Appliance)</option>
                         <option value="Hazardous">Hazardous (Paint, Batteries)</option>
                     </select>
+
+                    <label style={modalStyles.label}>Estimated Weight (kg):</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        required
+                        style={modalStyles.input}
+                        placeholder="e.g., 12.5"
+                    />
 
                     <label style={modalStyles.label}>Preferred Date:</label>
                     <input
@@ -116,7 +129,7 @@ const modalStyles = {
         width: '100%',
         padding: '12px',
         marginTop: '25px',
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#059669',
         color: 'white',
         border: 'none',
         borderRadius: '4px',

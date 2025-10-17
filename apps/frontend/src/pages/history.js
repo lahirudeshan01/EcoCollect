@@ -18,35 +18,35 @@ function WasteHistoryPage() {
             });
     }, []);
 
-    if (isLoading) return <Layout activeTab="History"><p>Loading Waste History...</p></Layout>;
+    if (isLoading) return <Layout activeTab="History" variant="sidebar"><p className="p-8 text-lg">Loading Waste History...</p></Layout>;
 
     return (
-        <Layout activeTab="History">
-            <h1>Waste Collection History</h1>
-            <p>View detailed records of waste collected from your residence.</p>
+        <Layout activeTab="History" variant="sidebar">
+            <div className="max-w-3xl mx-auto p-8">
+                <h1 className="text-3xl font-bold mb-2 text-gray-800">Waste Collection History</h1>
+                <p className="text-gray-500 mb-8">View detailed records of waste collected from your residence.</p>
 
-            <table style={styles.table}>
-                <thead>
-                    <tr>
-                        <th style={styles.th}>Date</th>
-                        <th style={styles.th}>Waste Type</th>
-                        <th style={styles.th}>Weight (kg)</th>
-                        <th style={styles.th}>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
+                <div className="space-y-6">
                     {history.length > 0 ? history.map((record, index) => (
-                        <tr key={index}>
-                            <td style={styles.td}>{record.date}</td>
-                            <td style={styles.td}>{record.type}</td>
-                            <td style={styles.td}>{record.weight || 'N/A'}</td>
-                            <td style={styles.td}>{record.status}</td>
-                        </tr>
+                        <div key={index} className="bg-white rounded-xl shadow-lg p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-lg font-semibold text-gray-800">{record.type} Pickup</p>
+                                <p className="text-sm text-gray-500">{new Date(record.date).toLocaleDateString()}</p>
+                                <p className="text-sm text-gray-500">{record.weight ? `${record.weight} kg` : 'Weight not recorded'}</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                record.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                record.status === 'Scheduled' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'
+                            }`}>
+                                {record.status}
+                            </span>
+                        </div>
                     )) : (
-                        <tr><td colSpan="4" style={styles.td}>No history found.</td></tr>
+                        <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow">No history found.</div>
                     )}
-                </tbody>
-            </table>
+                </div>
+            </div>
         </Layout>
     );
 }

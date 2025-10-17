@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 
 function SettingsPage() {
     return (
-        <Layout activeTab="Settings">
+        <Layout activeTab="Settings" variant="sidebar">
             <div className="max-w-3xl mx-auto p-8 bg-white rounded-xl shadow-lg">
                 <h1 className="text-3xl font-bold mb-2 text-gray-800">Settings</h1>
                 <p className="text-gray-500 mb-8">Manage your account, billing, notifications, rewards, and app preferences.</p>
@@ -26,8 +26,8 @@ function SettingsPage() {
                         </div>
                     </div>
                     <div className="flex gap-4 mb-4">
-                        <button className="px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition">Change Password</button>
-                        <button className="px-5 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold shadow hover:bg-gray-200 transition">Setup 2FA</button>
+                        <button className="px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition">Change Password</button>
+                        <button className="px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition">Setup 2FA</button>
                     </div>
                     <div className="mb-2">
                         <label className="block text-sm font-medium text-gray-600 mb-1">Primary Collection Address</label>
@@ -40,17 +40,17 @@ function SettingsPage() {
                 <section className="mb-10">
                     <h2 className="text-xl font-semibold mb-4 text-gray-700">Billing & Payment</h2>
                     <div className="flex gap-4 mb-4">
-                        <button className="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold shadow hover:bg-green-700 transition">Add Payment Method</button>
-                        <button className="px-5 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold shadow hover:bg-gray-200 transition">Manage Payment Methods</button>
+                        <button className="px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition">Add Payment Method</button>
+                        <button className="px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition">Manage Payment Methods</button>
                     </div>
-                    <a href="/resident/payments" className="text-green-600 text-sm mt-2 inline-block">View Billing History</a>
+                    <a href="/resident/payments" className="text-emerald-600 text-sm mt-2 inline-block">View Billing History</a>
                     <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-600 mb-1">Subscription/Plan</label>
                         <select className="w-full border rounded-lg px-3 py-2">
                             <option>Weekly Collection</option>
                             <option>Bi-Weekly Collection</option>
                         </select>
-                        <button className="mt-2 px-4 py-2 rounded-lg bg-blue-100 text-blue-700 font-semibold shadow hover:bg-blue-200 transition">Change Plan</button>
+                        <button className="mt-2 px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition">Change Plan</button>
                     </div>
                 </section>
 
@@ -59,13 +59,13 @@ function SettingsPage() {
                     <h2 className="text-xl font-semibold mb-4 text-gray-700">Notifications & Communication</h2>
                     <div className="flex flex-col gap-2">
                         <label className="flex items-center gap-2">
-                            <input type="checkbox" className="accent-blue-600" /> Pickup Reminders
+                            <input type="checkbox" className="accent-emerald-600" /> Pickup Reminders
                         </label>
                         <label className="flex items-center gap-2">
-                            <input type="checkbox" className="accent-blue-600" /> Status Updates
+                            <input type="checkbox" className="accent-emerald-600" /> Status Updates
                         </label>
                         <label className="flex items-center gap-2">
-                            <input type="checkbox" className="accent-blue-600" /> System Alerts
+                            <input type="checkbox" className="accent-emerald-600" /> System Alerts
                         </label>
                     </div>
                 </section>
@@ -87,7 +87,7 @@ function SettingsPage() {
                             <div className="text-sm text-gray-600">Current Reward Points</div>
                             <div className="text-2xl font-bold text-green-700">120</div>
                         </div>
-                        <button className="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold shadow hover:bg-green-700 transition">Redeem Rewards</button>
+                        <button className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition">Redeem Rewards</button>
                         <a href="#" className="text-green-600 text-sm">View Reward Rules</a>
                     </div>
                 </section>

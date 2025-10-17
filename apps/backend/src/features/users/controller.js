@@ -19,8 +19,8 @@ async function createUser(req, res) {
 
 async function getWasteHistory(req, res) {
   try {
-    // Assume req.user.id is set by auth middleware
-    const residentId = req.user.id;
+    // Use JWT subject (sub) set by auth middleware
+    const residentId = req.user.sub;
     const history = await WasteRecord.find({ residentId }).sort({ scheduledDate: -1 });
     res.json(history);
   } catch (error) {

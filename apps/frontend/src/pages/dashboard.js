@@ -17,7 +17,7 @@ const KPICard = ({ title, value, unit, icon: Icon }) => (
                 {value} <span className="text-base font-normal text-gray-600">{unit}</span>
             </p>
         </div>
-        <div className="text-purple-500 bg-purple-100 p-3 rounded-full">
+        <div className="text-emerald-600 bg-emerald-100 p-3 rounded-full">
             <Icon className="w-6 h-6" />
         </div>
     </div>
@@ -86,15 +86,33 @@ function Dashboard() {
         } else if (result.requiresPayment) {
             alert('Large item pickup requested. Redirecting to payment...');
             navigate('/resident/payment');
+        } else if (result.error) {
+            alert(result.error);
         } else {
             alert('Pickup scheduled successfully!');
-            fetchDashboardData().then(setData); // Refresh data
+            // Optimistic update so the user sees it immediately
+            setData((prev) => {
+                const optimistic = {
+                    id: result.id || Math.random().toString(36).slice(2),
+                    date: formData.date,
+                    type: formData.wasteType,
+                    weight: formData.weight ? parseFloat(formData.weight) : 0,
+                    status: 'Scheduled'
+                };
+                const recentActivity = [optimistic, ...(prev?.recentActivity || [])];
+                const totalWaste = recentActivity.reduce((sum, r) => sum + (r.weight || 0), 0);
+                const pendingPickups = recentActivity.filter(r => String(r.status).toLowerCase() !== 'completed').length;
+                const nextPickupDate = recentActivity.find(r => String(r.status).toLowerCase() === 'scheduled')?.date || null;
+                return { ...(prev || {}), recentActivity, totalWaste, pendingPickups, nextPickupDate };
+            });
+            // Then sync from server
+            fetchDashboardData().then(setData).catch(() => {});
         }
     };
 
     if (data === null) {
         // Enhanced Loading State (Skeleton screen highly recommended here)
-        return <Layout activeTab="Home"><p className="p-8 text-lg">Loading dashboard data...</p></Layout>;
+        return <Layout activeTab="Home" variant="sidebar"><p className="p-8 text-lg">Loading dashboard data...</p></Layout>;
     }
 
     // --- Destructure data for cleaner usage ---
@@ -102,7 +120,7 @@ function Dashboard() {
 
 
     return (
-        <Layout activeTab="Home">
+        <Layout activeTab="Home" variant="sidebar">
             <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
                 
                 {/* Header and CTA */}
@@ -110,7 +128,7 @@ function Dashboard() {
                     <h1 className="text-3xl font-bold text-gray-800">Resident Dashboard</h1>
                     <button 
                         onClick={() => setIsRequesting(true)}
-                        className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-200"
+                        className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-200"
                     >
                         <TrashIcon className="w-5 h-5"/>
                         <span>Request New Pickup</span>

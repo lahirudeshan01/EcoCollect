@@ -24,13 +24,13 @@ export default function EcoCollectHome() {
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
           <a className="hover:text-emerald-600 transition">How it works</a>
           <a className="hover:text-emerald-600 transition">Features</a>
-          <a className="hover:text-emerald-600 transition cursor-pointer" onClick={() => window.location.href = '/dashboard'}>For Residents</a>
+          <a className="hover:text-emerald-600 transition cursor-pointer" onClick={() => window.location.href = '/register'}>For Residents</a>
           <a className="hover:text-emerald-600 transition">For Authorities</a>
           <a className="hover:text-emerald-600 transition">Docs</a>
   </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          <button className="px-4 py-2 rounded-md text-sm font-semibold">Sign in</button>
+          <button className="px-4 py-2 rounded-md text-sm font-semibold" onClick={() => window.location.href = '/login'}>Sign in</button>
           <button className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold shadow hover:shadow-lg transition">Get Started</button>
         </div>
 

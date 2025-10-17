@@ -25,18 +25,33 @@ export async function fetchWasteHistory() {
 }
 // Mock login function for authentication
 export async function login(email, password) {
-    // Simulate API call delay
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            if (email === 'resident@test.com' && password === '12345') {
-                resolve({
-                    token: 'mock-token-123',
-                    userId: '1',
-                    name: 'Resident User'
-                });
-            } else {
-                reject(new Error('Invalid credentials'));
-            }
-        }, 500);
+    const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
     });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Login failed');
+    }
+    const data = await res.json();
+    // Backend returns { token, user: { id, name, email, role } }
+    return {
+        token: data.token,
+        userId: data.user?.id,
+        name: data.user?.name || 'Resident'
+    };
+}
+
+export async function register(name, email, password) {
+    const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Registration failed');
+    }
+    return await res.json();
 }
