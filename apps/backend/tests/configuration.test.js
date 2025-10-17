@@ -94,4 +94,31 @@ describe('Configuration API', () => {
       ])
     );
   });
+
+  test('DELETE removes configuration and subsequent GET recreates default', async () => {
+    const app = buildApp();
+
+    // Ensure there is a config
+    let res = await request(app)
+      .get('/config')
+      .set('Cookie', signCookie({ id: 'admin1', role: 'ADMIN' }));
+    expect(res.status).toBe(200);
+    const id = res.body?._id;
+    expect(id).toBeTruthy();
+
+    // Delete configuration
+    res = await request(app)
+      .delete('/config')
+      .set('Cookie', signCookie({ id: 'admin1', role: 'ADMIN' }));
+    expect(res.status).toBe(204);
+
+    // Next GET should recreate default config (new id likely)
+    res = await request(app)
+      .get('/config')
+      .set('Cookie', signCookie({ id: 'admin1', role: 'ADMIN' }));
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('_id');
+    expect(Array.isArray(res.body.billingModels || [])).toBe(true);
+    expect(Array.isArray(res.body.wasteCategories || [])).toBe(true);
+  });
 });
