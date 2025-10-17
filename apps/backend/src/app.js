@@ -4,6 +4,8 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const csurf = require('csurf');
 const apiRouter = require('./features');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -29,6 +31,22 @@ app.get('/api/csrf-token', (req, res) => {
 
 // Mount feature routers
 app.use('/api', apiRouter);
+
+// Swagger docs
+const swaggerSpec = swaggerJsdoc({
+	definition: {
+		openapi: '3.0.0',
+		info: {
+			title: 'EcoCollect API',
+			version: '1.0.0',
+		},
+		servers: [{ url: `http://localhost:${process.env.PORT || 5001}` }],
+	},
+	apis: [
+		__dirname + '/features/**/*.js',
+	],
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Centralized error handler
 app.use(errorHandler);

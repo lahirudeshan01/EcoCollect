@@ -190,6 +190,7 @@ export default function LoginPage() {
                 <p className="font-medium mb-1">First time here?</p>
                 <p>Seed an admin account: <a className="underline hover:text-blue-900 font-medium" href={`${API_BASE}/auth/seed-admin`} target="_blank" rel="noreferrer">Seed Admin</a></p>
                 <p className="mt-1 text-blue-700">Use: <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono">admin@ecocollect.local</code> / <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono">admin123</code></p>
+                <p className="mt-2"><a className="underline font-medium" href="/forgot-password">Forgot your password?</a></p>
               </div>
             </div>
           </div>
