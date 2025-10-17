@@ -105,3 +105,26 @@ export async function register(name, email, password) {
     throw error;
   }
 }
+
+// Request a new pickup
+export async function requestPickup(pickupData) {
+  const res = await fetch('http://localhost:5001/api/pickups', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pickupData),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    return { error: errorData.message || 'Failed to request pickup' };
+  }
+
+  return await res.json(); // returns the saved pickup with _id
+}
+
+// Fetch dashboard data (all pickups)
+export async function fetchDashboardData() {
+  const res = await fetch('http://localhost:5001/api/pickups');
+  if (!res.ok) throw new Error('Failed to fetch pickups');
+  return await res.json();
+}

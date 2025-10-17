@@ -25,7 +25,8 @@ function App() {
           <Route path="/resident/history" element={<WasteHistoryPage />} />
           <Route path="/resident/settings" element={<SettingsPage />} />
           <Route path="/resident/statistics" element={<StatisticsPage />} />
-            <Route path="/add-card" element={<AddCardPage />} />
+          <Route path="/add-card" element={<AddCardPage />} />
+          
         </Routes>
       </AuthProvider>
     </Router>

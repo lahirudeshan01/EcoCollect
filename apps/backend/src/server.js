@@ -1,49 +1,49 @@
 require('dotenv').config();
-const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/db');
-const appRoutes = require('./app');          // your existing app.js
-const paymentRoutes = require('./routes/paymentRoutes'); // Make sure this exists
+const morgan = require('morgan');
+const connectDB = require('./config/db'); // MongoDB connection
 
-// Create Express app
+// Import routers
+const pickups = require('./routes/pickups');
+const paymentRoutes = require('./routes/paymentRoutes');
+
 const app = express();
 
 // Middleware
-app.use(cors());           // enable CORS
-app.use(express.json());   // parse JSON body
-app.use(appRoutes);        // use existing routes from app.js if any
+app.use(cors({
+  origin: 'http://localhost:3000', // React frontend URL
+  credentials: true,
+}));
+app.use(express.json());
+app.use(morgan('dev'));
 
-// API routes
-app.use('/api/payments', paymentRoutes);
-
-// Health check (optional)
+// Health check
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', service: 'EcoCollect API' });
+});
+
+// Routes
+app.use('/api/pickups', pickups);
+app.use('/api/payments', paymentRoutes); // <-- Mount payment routes
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
 });
 
 // Start server
 (async () => {
   try {
     await connectDB();
-
-    const PORT = process.env.PORT || 5000;
-    const server = http.createServer(app);
-
-    server.listen(PORT, () => {
-      console.log(`✅ Backend API listening on http://localhost:${PORT}`);
-    });
-
-    // Handle port already in use
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use. Try using another port.`);
-        process.exit(1);
-      } else {
-        console.error('❌ Server error:', err);
-        process.exit(1);
-      }
-    });
+    const PORT = process.env.PORT || 5001;
+    app.listen(PORT, () => console.log(`✅ Backend API running on http://localhost:${PORT}`));
   } catch (err) {
     console.error('❌ Failed to start server:', err);
     process.exit(1);

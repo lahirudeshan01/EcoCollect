@@ -1,6 +1,8 @@
 const express = require('express');
 const Payment = require('../models/Payment');
 
+
+
 const router = express.Router();
 
 // Get all payments
