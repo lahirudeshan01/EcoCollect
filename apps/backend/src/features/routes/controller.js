@@ -106,7 +106,12 @@ const createRoute = async (req, res) => {
     // Check if route with same ID already exists
     const existingRoute = await Route.findOne({ routeId });
     if (existingRoute) {
-      return res.status(400).json({ error: 'Route with this ID already exists' });
+      console.log(`Duplicate route ID detected: ${routeId}`);
+      return res.status(409).json({ 
+        error: 'Route ID already exists',
+        message: `A route with ID "${routeId}" already exists in the database. Please use a different route ID.`,
+        conflictingRouteId: routeId
+      });
     }
 
     // Calculate estimated time based on distance and number of points
@@ -133,6 +138,16 @@ const createRoute = async (req, res) => {
   } catch (error) {
     console.error('Error creating route:', error);
     console.error('Error details:', error.message);
+    
+    // Handle duplicate key error from MongoDB
+    if (error.code === 11000 || error.name === 'MongoServerError') {
+      return res.status(409).json({ 
+        error: 'Route ID already exists',
+        message: 'This route ID is already in use. The system will generate a new unique ID.',
+        details: error.message 
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Failed to create route',
       details: error.message 

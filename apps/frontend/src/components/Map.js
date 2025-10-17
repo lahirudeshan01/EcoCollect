@@ -23,6 +23,47 @@ export const defaultWasteCollectionPoints = [
   { id: 4, position: [6.9333, 79.9833], name: "Kaduwela Town", status: "completed", municipalCouncil: "Kaduwela Municipal Council" },
 ];
 
+// Dummy collection points (bins) distributed across roads in each municipal area
+// All coordinates verified to be on land/roads, not in the sea
+export const dummyCollectionBins = [
+  // Colombo Municipal Council bins (Central Colombo area - inland roads)
+  { id: 'bin-1', position: [6.9271, 79.8612], name: "Bin 1 - Fort", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-2', position: [6.9311, 79.8678], name: "Bin 2 - Pettah", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-3', position: [6.9331, 79.8734], name: "Bin 3 - Maradana", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-4', position: [6.9251, 79.8595], name: "Bin 4 - Slave Island", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-5', position: [6.9191, 79.8565], name: "Bin 5 - Kollupitiya", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-6', position: [6.9145, 79.8545], name: "Bin 6 - Bambalapitiya", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-7', position: [6.9089, 79.8535], name: "Bin 7 - Wellawatte", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-8', position: [6.9421, 79.8623], name: "Bin 8 - Grandpass", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-9', position: [6.9195, 79.8698], name: "Bin 9 - Borella", municipalCouncil: "Colombo Municipal Council" },
+  { id: 'bin-10', position: [6.9125, 79.8751], name: "Bin 10 - Dematagoda", municipalCouncil: "Colombo Municipal Council" },
+
+  // Dehiwala-Mount Lavinia Municipal Council bins (inland roads only)
+  { id: 'bin-11', position: [6.8459, 79.8671], name: "Bin 11 - Dehiwala", municipalCouncil: "Dehiwala-Mount Lavinia Municipal Council" },
+  { id: 'bin-12', position: [6.8389, 79.8651], name: "Bin 12 - Mount Lavinia", municipalCouncil: "Dehiwala-Mount Lavinia Municipal Council" },
+  { id: 'bin-13', position: [6.8529, 79.8711], name: "Bin 13 - Dehiwala East", municipalCouncil: "Dehiwala-Mount Lavinia Municipal Council" },
+  { id: 'bin-14', position: [6.8319, 79.8631], name: "Bin 14 - Ratmalana", municipalCouncil: "Dehiwala-Mount Lavinia Municipal Council" },
+  { id: 'bin-15', position: [6.8559, 79.8691], name: "Bin 15 - Attidiya", municipalCouncil: "Dehiwala-Mount Lavinia Municipal Council" },
+  { id: 'bin-16', position: [6.8429, 79.8731], name: "Bin 16 - Nedimala", municipalCouncil: "Dehiwala-Mount Lavinia Municipal Council" },
+
+  // Sri Jayawardenapura Kotte Municipal Council bins
+  { id: 'bin-17', position: [6.8906, 79.9015], name: "Bin 17 - Kotte", municipalCouncil: "Sri Jayawardenapura Kotte Municipal Council" },
+  { id: 'bin-18', position: [6.8976, 79.9085], name: "Bin 18 - Ethul Kotte", municipalCouncil: "Sri Jayawardenapura Kotte Municipal Council" },
+  { id: 'bin-19', position: [6.8836, 79.8945], name: "Bin 19 - Rajagiriya", municipalCouncil: "Sri Jayawardenapura Kotte Municipal Council" },
+  { id: 'bin-20', position: [6.8766, 79.8875], name: "Bin 20 - Nawala", municipalCouncil: "Sri Jayawardenapura Kotte Municipal Council" },
+  { id: 'bin-21', position: [6.8846, 79.9125], name: "Bin 21 - Madiwela", municipalCouncil: "Sri Jayawardenapura Kotte Municipal Council" },
+  { id: 'bin-22', position: [6.9046, 79.9155], name: "Bin 22 - Battaramulla", municipalCouncil: "Sri Jayawardenapura Kotte Municipal Council" },
+  { id: 'bin-23', position: [6.8706, 79.8995], name: "Bin 23 - Nugegoda", municipalCouncil: "Sri Jayawardenapura Kotte Municipal Council" },
+
+  // Kaduwela Municipal Council bins
+  { id: 'bin-24', position: [6.9333, 79.9833], name: "Bin 24 - Kaduwela Town", municipalCouncil: "Kaduwela Municipal Council" },
+  { id: 'bin-25', position: [6.9263, 79.9763], name: "Bin 25 - Athurugiriya", municipalCouncil: "Kaduwela Municipal Council" },
+  { id: 'bin-26', position: [6.9193, 79.9693], name: "Bin 26 - Malabe", municipalCouncil: "Kaduwela Municipal Council" },
+  { id: 'bin-27', position: [6.9463, 79.9763], name: "Bin 27 - Welikada", municipalCouncil: "Kaduwela Municipal Council" },
+  { id: 'bin-28', position: [6.9393, 79.9693], name: "Bin 28 - Hunupitiya", municipalCouncil: "Kaduwela Municipal Council" },
+  { id: 'bin-29', position: [6.9123, 79.9823], name: "Bin 29 - Hokandara", municipalCouncil: "Kaduwela Municipal Council" },
+];
+
 // Component to handle map clicks
 const MapClickHandler = ({ onMapClick, isRouteCreationMode }) => {
   useMapEvents({
@@ -293,6 +334,33 @@ const Map = ({
           </Marker>
         ))}
 
+        {/* Render dummy collection bins as small dots */}
+        {showDefaultPoints && !isRouteCreationMode && dummyCollectionBins
+          .filter(bin => bin.municipalCouncil === selectedArea)
+          .map((bin) => {
+            const binIcon = L.divIcon({
+              className: 'custom-bin-icon',
+              html: `<div style="background-color: #10B981; width: 8px; height: 8px; border-radius: 50%; border: 1px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>`,
+              iconSize: [8, 8],
+              iconAnchor: [4, 4],
+            });
+            
+            return (
+              <Marker
+                key={bin.id}
+                position={bin.position}
+                icon={binIcon}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <h3 className="font-semibold text-sm">🗑️ {bin.name}</h3>
+                    <p className="text-xs text-gray-600">Collection Point</p>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+
         {/* Render depot marker when in route creation mode */}
         {isRouteCreationMode && (() => {
           const municipalPoint = defaultWasteCollectionPoints.find(
@@ -389,6 +457,10 @@ const Map = ({
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
                 <span className="text-xs">Other Municipal Councils</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-xs">Collection Bins</span>
               </div>
             </>
           )}

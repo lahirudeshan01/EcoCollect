@@ -1,6 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { routeAPI } from '../services/api';
+
+// Custom hook for animated counting
+function useCountAnimation(targetValue, duration = 1000) {
+  const [count, setCount] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (targetValue === 0) {
+      setCount(0);
+      return;
+    }
+
+    setIsAnimating(true);
+    const startValue = 0;
+    const increment = targetValue / (duration / 16); // 60fps
+    let currentValue = startValue;
+    
+    const timer = setInterval(() => {
+      currentValue += increment;
+      if (currentValue >= targetValue) {
+        setCount(targetValue);
+        setIsAnimating(false);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(currentValue));
+      }
+    }, 16);
+
+    return () => clearInterval(timer);
+  }, [targetValue, duration]);
+
+  return { count, isAnimating };
+}
 
 // Icons for the dashboard
 const TruckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 3H15V17H1V3Z" stroke="#10B981" strokeWidth="1.5" /><path d="M15 8H23L19 12H15" stroke="#10B981" strokeWidth="1.5" /><circle cx="6" cy="20" r="2" stroke="#10B981" strokeWidth="1.5" /><circle cx="18" cy="20" r="2" stroke="#10B981" strokeWidth="1.5" /></svg>;
@@ -188,14 +221,41 @@ function DashboardCard({ title, value, icon, color = 'emerald' }) {
     cyan: 'bg-cyan-50'
   };
 
+  // Parse value to extract number and unit
+  const parseValue = (val) => {
+    if (typeof val === 'number') {
+      return { number: val, unit: '', isNumber: true };
+    }
+    
+    // Extract number from string like "10.5 km" or "45m"
+    const match = String(val).match(/^([\d.]+)\s*(.*)$/);
+    if (match) {
+      return { number: parseFloat(match[1]), unit: match[2], isNumber: true };
+    }
+    
+    return { number: 0, unit: val, isNumber: false };
+  };
+
+  const { number: targetNumber, unit, isNumber } = parseValue(value);
+  
+  // Use animated counting for numeric values
+  const { count, isAnimating } = useCountAnimation(isNumber ? targetNumber : 0, 1500);
+  
+  // Format the animated value
+  const animatedValue = isNumber 
+    ? (Number.isInteger(targetNumber) ? count : count.toFixed(1)) + (unit ? ' ' + unit : '')
+    : value;
+
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-6">
-      <div className={`w-14 h-14 rounded-full ${colorClasses[color]} flex items-center justify-center`}>
+    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-6 hover:shadow-md transition-shadow duration-300">
+      <div className={`w-14 h-14 rounded-full ${colorClasses[color]} flex items-center justify-center transition-transform duration-300 ${isAnimating ? 'scale-110' : 'scale-100'}`}>
         {icon}
       </div>
       <div>
         <div className="text-gray-500 text-sm">{title}</div>
-        <div className="text-2xl font-bold mt-1">{value}</div>
+        <div className={`text-2xl font-bold mt-1 transition-all duration-300 ${isAnimating ? 'text-emerald-600 scale-105' : 'text-gray-900 scale-100'}`}>
+          {animatedValue}
+        </div>
       </div>
     </div>
   );

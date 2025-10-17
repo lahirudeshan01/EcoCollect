@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Map, { defaultWasteCollectionPoints } from '../components/Map';
+import Map, { defaultWasteCollectionPoints, dummyCollectionBins } from '../components/Map';
 import { routeAPI } from '../services/api';
 
 export default function RouteOptimizationPage() {
@@ -198,6 +198,21 @@ export default function RouteOptimizationPage() {
     setCurrentRoadRoute(roadRoute);
   };
 
+  // Generate unique route ID
+  const generateUniqueRouteId = () => {
+    const existingIds = generatedRoutes.map(route => route.routeId || route.id);
+    let newId;
+    let counter = 101;
+    
+    // Keep incrementing until we find a unique ID
+    do {
+      newId = `R-${String(counter).padStart(3, '0')}`;
+      counter++;
+    } while (existingIds.includes(newId));
+    
+    return newId;
+  };
+
   // Handle route generation
   const handleGenerateRoutes = () => {
     if (selectedPoints.length < 2) {
@@ -218,7 +233,7 @@ export default function RouteOptimizationPage() {
         calculateRoadRouteDistance(currentRoadRoute) : 
         calculateRoadRouteDistance(optimizedRoute);
       
-      const routeId = `R-${String(generatedRoutes.length + 101).padStart(3, '0')}`;
+      const routeId = generateUniqueRouteId();
       const truckId = `T-${String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')}`;
       
       // Create new route object
@@ -238,13 +253,28 @@ export default function RouteOptimizationPage() {
         console.log('Saving route with data:', newRouteData);
         const savedRoute = await routeAPI.createRoute(newRouteData);
         console.log('Route saved successfully:', savedRoute);
-        setGeneratedRoutes(prev => [savedRoute, ...prev]);
-        alert('Route created and saved successfully!');
+        
+        // Refetch all routes to ensure we have the latest list
+        const allRoutes = await routeAPI.getAllRoutes();
+        setGeneratedRoutes(allRoutes);
+        
+        alert('✅ Route created and saved successfully!\n\nRoute ID: ' + routeId + '\nTruck: ' + truckId);
       } catch (error) {
         console.error("Failed to save route:", error);
-        const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
-        const errorDetails = error.response?.data?.details || '';
-        alert(`Failed to save the new route: ${errorMessage}${errorDetails ? '\nDetails: ' + errorDetails : ''}\n\nPlease check if the backend server is running.`);
+        
+        // Check if it's a duplicate route ID error
+        if (error.response?.status === 409) {
+          const errorMessage = error.response?.data?.message || 'This route ID already exists.';
+          alert(`⚠️ Route ID Conflict\n\n${errorMessage}\n\nPlease try creating the route again - the system will generate a new unique ID.`);
+        } else if (error.response?.status === 400) {
+          const errorMessage = error.response?.data?.error || 'Invalid route data';
+          alert(`❌ Invalid Data\n\n${errorMessage}\n\nPlease check your selections and try again.`);
+        } else if (!error.response) {
+          alert(`❌ Connection Error\n\nCannot reach the backend server.\n\nPlease ensure:\n1. Backend server is running on port 5001\n2. You have internet connection\n3. No firewall is blocking the connection`);
+        } else {
+          const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+          alert(`❌ Failed to Save Route\n\n${errorMessage}\n\nPlease try again.`);
+        }
       } finally {
         setIsGenerating(false);
       }
@@ -257,6 +287,126 @@ export default function RouteOptimizationPage() {
     setGeneratedRoute(null);
     setCurrentRoadRoute(null);
     setIsRouteCreationMode(false);
+  };
+
+  // Automatic route generation based on council area
+  const handleAutoGenerateRoute = () => {
+    // First, clear any existing manual selections
+    setSelectedPoints([]);
+    setGeneratedRoute(null);
+    setCurrentRoadRoute(null);
+    
+    setIsGenerating(true);
+    setIsRouteCreationMode(false); // Keep route creation mode OFF for auto-generation
+    
+    // Get all bins for the selected council
+    const councilBins = dummyCollectionBins.filter(
+      bin => bin.municipalCouncil === selectedArea
+    );
+    
+    if (councilBins.length === 0) {
+      alert('No collection bins found for the selected council area.');
+      setIsGenerating(false);
+      return;
+    }
+    
+    // Get the municipal council depot location
+    const municipalPoint = defaultWasteCollectionPoints.find(
+      point => point.municipalCouncil === selectedArea
+    );
+    
+    if (!municipalPoint) {
+      alert('Municipal council depot not found.');
+      setIsGenerating(false);
+      return;
+    }
+    
+    // Calculate distance from depot to each bin
+    const binsWithDistance = councilBins.map(bin => ({
+      ...bin,
+      distanceFromDepot: getDistance(municipalPoint.position, bin.position)
+    }));
+    
+    // Sort bins by distance and select closest 8-12 bins
+    const numBinsToSelect = Math.min(10, binsWithDistance.length);
+    const selectedBins = binsWithDistance
+      .sort((a, b) => a.distanceFromDepot - b.distanceFromDepot)
+      .slice(0, numBinsToSelect);
+    
+    // Convert bins to points format
+    const autoSelectedPoints = selectedBins.map((bin, index) => ({
+      id: bin.id,
+      position: bin.position,
+      name: `Collection Point ${index + 1}`,
+      status: 'selected'
+    }));
+    
+    // Temporarily set points for route generation (but keep mode OFF)
+    setSelectedPoints(autoSelectedPoints);
+    
+    // Generate the optimized route
+    setTimeout(async () => {
+      const optimizedRoute = optimizeRoute(autoSelectedPoints);
+      setGeneratedRoute(optimizedRoute);
+      
+      // Wait for road route generation
+      setTimeout(async () => {
+        const routeDistance = currentRoadRoute ? 
+          calculateRoadRouteDistance(currentRoadRoute) : 
+          calculateRoadRouteDistance(optimizedRoute);
+        
+        const routeId = generateUniqueRouteId();
+        const truckId = `T-${String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')}`;
+        
+        // Create new route object
+        const newRouteData = {
+          routeId: routeId,
+          truck: truckId,
+          municipalCouncil: selectedArea,
+          distance: `${routeDistance} km`,
+          status: 'Optimized',
+          points: autoSelectedPoints.map(p => ({ lat: p.position[0], lng: p.position[1], id: p.id })),
+          route: optimizedRoute.map(p => ({ lat: p[0], lng: p[1] })),
+          roadRoute: currentRoadRoute ? currentRoadRoute.map(p => ({ lat: p[0], lng: p[1] })) : [],
+          dispatched: false
+        };
+
+        try {
+          console.log('Saving auto-generated route with data:', newRouteData);
+          const savedRoute = await routeAPI.createRoute(newRouteData);
+          console.log('Auto-generated route saved successfully:', savedRoute);
+          
+          // Refetch all routes to ensure we have the latest list
+          const allRoutes = await routeAPI.getAllRoutes();
+          setGeneratedRoutes(allRoutes);
+          
+          alert(`✅ Success!\n\nRoute created automatically with ${numBinsToSelect} collection points!\n\nRoute ID: ${routeId}\nTruck: ${truckId}\nDistance: ${routeDistance} km`);
+          
+          // Clear the temporary points after saving
+          setSelectedPoints([]);
+          setGeneratedRoute(null);
+          setCurrentRoadRoute(null);
+        } catch (error) {
+          console.error("Failed to save auto-generated route:", error);
+          
+          // Check if it's a duplicate route ID error
+          if (error.response?.status === 409) {
+            const errorMessage = error.response?.data?.message || 'This route ID already exists.';
+            alert(`⚠️ Route ID Conflict\n\n${errorMessage}\n\nPlease try generating the route again - the system will create a new unique ID.`);
+          } else if (error.response?.status === 400) {
+            const errorMessage = error.response?.data?.error || 'Invalid route data';
+            alert(`❌ Invalid Data\n\n${errorMessage}\n\nPlease check the selected council and try again.`);
+          } else if (!error.response) {
+            alert(`❌ Connection Error\n\nCannot reach the backend server.\n\nPlease ensure the backend is running on port 5001.`);
+          } else {
+            const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+            alert(`❌ Auto-Generate Failed\n\n${errorMessage}\n\nPlease try again.`);
+          }
+        } finally {
+          setIsGenerating(false);
+        }
+      }, 3000); // Wait for road routing to complete
+    }, 500);
   };
 
   // Toggle route creation mode
@@ -338,6 +488,54 @@ export default function RouteOptimizationPage() {
                 >
                   {isRouteCreationMode ? 'Cancel Route Creation' : 'Create New Route'}
                 </button>
+                
+                <button 
+                  onClick={handleAutoGenerateRoute}
+                  disabled={isGenerating}
+                  className={`w-full px-4 py-3 rounded-lg font-semibold shadow-lg transition-all duration-300 relative overflow-hidden ${
+                    isGenerating
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white hover:shadow-xl hover:scale-105 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700'
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    {isGenerating ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Generating Route...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <span>Auto-Generate Route</span>
+                        <svg className="w-4 h-4 opacity-70" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"></path>
+                        </svg>
+                      </>
+                    )}
+                  </span>
+                  {!isGenerating && (
+                    <span className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-10 transition-opacity">
+                      <span className="absolute inset-0 bg-white rounded-lg"></span>
+                    </span>
+                  )}
+                </button>
+                
+                {!isRouteCreationMode && !isGenerating && (
+                  <div className="text-xs text-center text-gray-500 -mt-1 px-2">
+                    <span className="flex items-center justify-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
+                      </svg>
+                      Selects optimal bins & creates route automatically
+                    </span>
+                  </div>
+                )}
                 
                 {isRouteCreationMode && (
                   <>
