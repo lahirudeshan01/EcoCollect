@@ -1,11 +1,9 @@
 const express = require('express');
 const Payment = require('../models/Payment');
 
-
-
 const router = express.Router();
 
-// Get all payments
+// -------------------- GET all payments --------------------
 router.get('/', async (req, res) => {
   try {
     const payments = await Payment.find().sort({ date: -1 });
@@ -16,7 +14,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Add a new payment
+// -------------------- Add a new payment --------------------
 router.post('/', async (req, res) => {
   try {
     const { residentName, address, date, amount, paymentMethod, cardDetails } = req.body;
@@ -35,6 +33,23 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to add payment' });
+  }
+});
+
+// -------------------- DELETE a payment --------------------
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Payment.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    res.json({ message: 'Payment deleted successfully', id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to delete payment' });
   }
 });
 
