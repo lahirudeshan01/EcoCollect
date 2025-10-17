@@ -18,12 +18,23 @@ export default function Navigation({ email, role = 'USER', currentPage }: NavPro
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  async function getCsrf(): Promise<string> {
+    try {
+      const r = await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' });
+      const j = await r.json();
+      return j?.csrfToken || '';
+    } catch {
+      return '';
+    }
+  }
+
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await fetch(`${API_BASE}/auth/logout`, { 
-        method: 'POST', 
-        credentials: 'include' 
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': await getCsrf() },
       });
       router.replace('/login');
     } catch (err) {
