@@ -40,7 +40,7 @@ const swaggerSpec = swaggerJsdoc({
 			title: 'EcoCollect API',
 			version: '1.0.0',
 		},
-		servers: [{ url: `http://localhost:${process.env.PORT || 5001}` }],
+	servers: [{ url: `http://localhost:${process.env.PORT || 5000}` }],
 	},
 	apis: [
 		__dirname + '/features/**/*.js',

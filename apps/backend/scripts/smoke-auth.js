@@ -3,7 +3,7 @@
   Run: npm run smoke (from apps/backend)
 */
 
-const BASE = process.env.BASE_URL || 'http://localhost:5001';
+const BASE = process.env.BASE_URL || 'http://localhost:5000';
 
 async function json(res) {
   const text = await res.text();
