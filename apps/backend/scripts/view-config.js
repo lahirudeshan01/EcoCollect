@@ -24,7 +24,12 @@ async function viewConfig() {
     const dbName = process.env.MONGO_DB_NAME || 'EcoCollectDB';
     
     console.log('Connecting to MongoDB...');
-    await mongoose.connect(uri, { dbName });
+    const opts = {
+      dbName,
+      serverSelectionTimeoutMS: 5000,
+      family: 4, // prefer IPv4 to avoid Windows DNS SRV hiccups
+    };
+    await mongoose.connect(uri, opts);
     console.log('✅ Connected to MongoDB\n');
 
     // Fetch all configs
