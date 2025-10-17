@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout from "../components/Layout";
-import { fetchPaymentHistory } from "../services/api";
+import { fetchPaymentHistory, addPayment } from "../services/api";
 
 function PaymentHistoryPage() {
   const [history, setHistory] = useState([]);
@@ -10,6 +10,7 @@ function PaymentHistoryPage() {
   const [residentName, setResidentName] = useState("");
   const [address, setAddress] = useState("");
   const [date, setDate] = useState("");
+  const [amount, setAmount] = useState(""); // NEW: Amount field
   const [paymentMethod, setPaymentMethod] = useState(""); // "card" or "cash"
 
   const [nameOnCard, setNameOnCard] = useState("");
@@ -20,16 +21,20 @@ function PaymentHistoryPage() {
 
   const [saving, setSaving] = useState(false);
 
+  // Fetch history from backend
+  const loadHistory = async () => {
+    try {
+      const data = await fetchPaymentHistory();
+      setHistory(data);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchPaymentHistory()
-      .then((data) => {
-        setHistory(data);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching payment history:", error);
-        setIsLoading(false);
-      });
+    loadHistory();
   }, []);
 
   const validateForm = () => {
@@ -43,6 +48,10 @@ function PaymentHistoryPage() {
     }
     if (!date) {
       alert("Date is required");
+      return false;
+    }
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      alert("Amount must be a positive number");
       return false;
     }
     if (!paymentMethod) {
@@ -74,25 +83,47 @@ function PaymentHistoryPage() {
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+
+    const payload = {
+      residentName,
+      address,
+      date,
+      amount: Number(amount),
+      paymentMethod,
+      cardDetails:
+        paymentMethod === "card"
+          ? { nameOnCard, cardNumber, expiry, cvc, billingAddress }
+          : null,
+    };
+
+    try {
+      await addPayment(payload); // POST to backend
       alert("Payment submitted successfully!");
       // Reset form
       setResidentName("");
       setAddress("");
       setDate("");
+      setAmount("");
       setPaymentMethod("");
       setNameOnCard("");
       setCardNumber("");
       setExpiry("");
       setCvc("");
       setBillingAddress("");
-    }, 700);
+
+      // Refresh history list
+      loadHistory();
+    } catch (error) {
+      console.error("Error adding payment:", error);
+      alert(error.message || "Failed to add payment");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (isLoading)
@@ -145,6 +176,17 @@ function PaymentHistoryPage() {
                 className="mt-1 w-full border rounded-md px-3 py-2"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Amount (USD)</label>
+              <input
+                type="number"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
               />
             </div>
 
@@ -270,7 +312,7 @@ function PaymentHistoryPage() {
                   {record.type === "Payback"
                     ? `+${record.amount.toFixed(2)}`
                     : `-${record.amount.toFixed(2)}`}{" "}
-                  <span className="text-base font-normal text-gray-600">USD</span>
+                  <span className="text-base font-normal text-gray-600">Rs</span>
                 </div>
                 <div className="text-sm text-gray-500">{record.date}</div>
               </div>
