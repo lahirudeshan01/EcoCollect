@@ -18,10 +18,12 @@ export default function RouteOptimizationPage() {
     const fetchRoutes = async () => {
       try {
         const routes = await routeAPI.getAllRoutes();
+        console.log('Fetched routes:', routes);
         setGeneratedRoutes(routes);
       } catch (error) {
         console.error("Failed to fetch routes:", error);
-        alert('Failed to load routes. Please try again.');
+        const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+        alert(`Failed to load routes: ${errorMessage}\n\nPlease check if the backend server is running on port 5000.`);
       }
     };
     fetchRoutes();
@@ -233,12 +235,16 @@ export default function RouteOptimizationPage() {
       };
 
       try {
+        console.log('Saving route with data:', newRouteData);
         const savedRoute = await routeAPI.createRoute(newRouteData);
+        console.log('Route saved successfully:', savedRoute);
         setGeneratedRoutes(prev => [savedRoute, ...prev]);
         alert('Route created and saved successfully!');
       } catch (error) {
         console.error("Failed to save route:", error);
-        alert('Failed to save the new route. Please try again.');
+        const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+        const errorDetails = error.response?.data?.details || '';
+        alert(`Failed to save the new route: ${errorMessage}${errorDetails ? '\nDetails: ' + errorDetails : ''}\n\nPlease check if the backend server is running.`);
       } finally {
         setIsGenerating(false);
       }
@@ -327,7 +333,7 @@ export default function RouteOptimizationPage() {
                   className={`w-full px-4 py-2 rounded-md font-semibold shadow transition ${
                     isRouteCreationMode 
                       ? 'bg-red-600 text-white hover:bg-red-700' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
                   }`}
                 >
                   {isRouteCreationMode ? 'Cancel Route Creation' : 'Create New Route'}
@@ -335,7 +341,7 @@ export default function RouteOptimizationPage() {
                 
                 {isRouteCreationMode && (
                   <>
-                    <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded">
+                    <div className="text-sm text-gray-600 bg-emerald-50 p-3 rounded">
                       <p className="font-medium">Selected Points: {selectedPoints.length}</p>
                       <p className="text-xs mt-1">Click on the map to add collection points</p>
                     </div>
@@ -408,6 +414,7 @@ export default function RouteOptimizationPage() {
                                 <th scope="col" className="px-6 py-3">Truck</th>
                                 <th scope="col" className="px-6 py-3">Municipal Council</th>
                                 <th scope="col" className="px-6 py-3">Distance</th>
+                                <th scope="col" className="px-6 py-3">Est. Time</th>
                                 <th scope="col" className="px-6 py-3">Status</th>
                                 <th scope="col" className="px-6 py-3">Actions</th>
                             </tr>
@@ -424,6 +431,11 @@ export default function RouteOptimizationPage() {
                                   <td className="px-6 py-4">{route.truck}</td>
                                   <td className="px-6 py-4">{route.municipalCouncil}</td>
                                   <td className="px-6 py-4">{route.distance}</td>
+                                  <td className="px-6 py-4">
+                                    <span className="text-blue-600 font-medium">
+                                      {route.estimatedTime || 'N/A'}
+                                    </span>
+                                  </td>
                                   <td className="px-6 py-4">
                                     <span className="text-green-600 bg-green-100 px-2 py-1 rounded-full text-xs">
                                       {route.status}

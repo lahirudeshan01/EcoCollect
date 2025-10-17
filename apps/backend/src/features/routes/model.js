@@ -18,6 +18,14 @@ const routeSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  estimatedTime: {
+    type: String,
+    default: null
+  },
+  estimatedTimeMinutes: {
+    type: Number,
+    default: null
+  },
   status: {
     type: String,
     required: true,
@@ -32,10 +40,10 @@ const routeSchema = new mongoose.Schema({
     lat: Number,
     lng: Number
   }],
-  roadRoute: {
-    type: mongoose.Schema.Types.Mixed,
-    default: null
-  },
+  roadRoute: [{
+    lat: Number,
+    lng: Number
+  }],
   dispatched: {
     type: Boolean,
     default: false

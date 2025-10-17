@@ -106,11 +106,13 @@ export default function RouteDetailsPage() {
         </header>
 
         <main className="flex-1 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <InfoCard title="Distance" value={route.distance} />
-            <InfoCard title="Estimated Time" value="45 mins" />
+            <InfoCard title="Estimated Time" value={route.estimatedTime || 'N/A'} />
+            <InfoCard title="Average Speed" value="22 km/h" />
             <InfoCard title="Truck Assigned" value={route.truck} />
           </div>
+
           <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
             <h2 className="text-lg font-semibold mb-4">Route Map</h2>
             <div className="h-96">

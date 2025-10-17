@@ -1,13 +1,83 @@
 const Route = require('./model');
 
+/**
+ * Calculate estimated time for a route based on distance and number of collection points
+ * @param {string} distanceStr - Distance string (e.g., "10.5 km")
+ * @param {number} numPoints - Number of collection points
+ * @returns {object} - { timeString: "1h 25m", minutes: 85 }
+ */
+const calculateEstimatedTime = (distanceStr, numPoints = 0) => {
+  // Extract numeric value from distance string
+  const distanceKm = parseFloat(distanceStr.replace(/[^\d.]/g, ''));
+  
+  if (isNaN(distanceKm)) {
+    return { timeString: 'N/A', minutes: 0 };
+  }
+
+  // Average speed in urban areas: 20-25 km/h (considering traffic, stops)
+  const averageSpeedKmh = 22;
+  
+  // Time spent at each collection point (in minutes)
+  const timePerStopMinutes = 3;
+  
+  // Calculate driving time
+  const drivingTimeMinutes = (distanceKm / averageSpeedKmh) * 60;
+  
+  // Calculate collection time
+  const collectionTimeMinutes = numPoints * timePerStopMinutes;
+  
+  // Total estimated time
+  const totalMinutes = Math.round(drivingTimeMinutes + collectionTimeMinutes);
+  
+  // Format time string
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  let timeString;
+  if (hours > 0) {
+    timeString = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  } else {
+    timeString = `${minutes}m`;
+  }
+  
+  return {
+    timeString,
+    minutes: totalMinutes
+  };
+};
+
 // Get all routes
 const getAllRoutes = async (req, res) => {
   try {
     const routes = await Route.find().sort({ createdAt: -1 });
+    console.log(`Retrieved ${routes.length} routes from database`);
+    
+    // Calculate time for routes that don't have it
+    let updated = false;
+    for (const route of routes) {
+      if (!route.estimatedTime && route.distance) {
+        const numPoints = route.points ? route.points.length : 0;
+        const timeEstimate = calculateEstimatedTime(route.distance, numPoints);
+        route.estimatedTime = timeEstimate.timeString;
+        route.estimatedTimeMinutes = timeEstimate.minutes;
+        await route.save();
+        updated = true;
+        console.log(`Updated time for route ${route.routeId}: ${timeEstimate.timeString}`);
+      }
+    }
+    
+    if (updated) {
+      console.log('Some routes were updated with calculated times');
+    }
+    
     res.json(routes);
   } catch (error) {
     console.error('Error fetching routes:', error);
-    res.status(500).json({ error: 'Failed to fetch routes' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch routes',
+      details: error.message 
+    });
   }
 };
 
@@ -25,28 +95,48 @@ const createRoute = async (req, res) => {
       roadRoute
     } = req.body;
 
+    // Validate required fields
+    if (!routeId || !truck || !municipalCouncil || !distance) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['routeId', 'truck', 'municipalCouncil', 'distance']
+      });
+    }
+
     // Check if route with same ID already exists
     const existingRoute = await Route.findOne({ routeId });
     if (existingRoute) {
       return res.status(400).json({ error: 'Route with this ID already exists' });
     }
 
+    // Calculate estimated time based on distance and number of points
+    const numPoints = points ? points.length : 0;
+    const timeEstimate = calculateEstimatedTime(distance, numPoints);
+
     const newRoute = new Route({
       routeId,
       truck,
       municipalCouncil,
       distance,
-      status,
-      points,
-      route,
-      roadRoute
+      estimatedTime: timeEstimate.timeString,
+      estimatedTimeMinutes: timeEstimate.minutes,
+      status: status || 'Optimized',
+      points: points || [],
+      route: route || [],
+      roadRoute: roadRoute || [],
+      dispatched: false
     });
 
     const savedRoute = await newRoute.save();
+    console.log('Route saved successfully:', savedRoute._id);
     res.status(201).json(savedRoute);
   } catch (error) {
     console.error('Error creating route:', error);
-    res.status(500).json({ error: 'Failed to create route' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to create route',
+      details: error.message 
+    });
   }
 };
 
@@ -101,10 +191,46 @@ const getRouteById = async (req, res) => {
       return res.status(404).json({ error: 'Route not found' });
     }
 
+    // Calculate time if it's missing
+    if (!route.estimatedTime && route.distance) {
+      const numPoints = route.points ? route.points.length : 0;
+      const timeEstimate = calculateEstimatedTime(route.distance, numPoints);
+      route.estimatedTime = timeEstimate.timeString;
+      route.estimatedTimeMinutes = timeEstimate.minutes;
+      await route.save();
+      console.log(`Updated time for route ${route.routeId}: ${timeEstimate.timeString}`);
+    }
+
     res.json(route);
   } catch (error) {
     console.error('Error fetching route:', error);
     res.status(500).json({ error: 'Failed to fetch route' });
+  }
+};
+
+// Get the latest route
+const getLatestRoute = async (req, res) => {
+  try {
+    const route = await Route.findOne().sort({ createdAt: -1 });
+
+    if (!route) {
+      return res.status(404).json({ error: 'No routes found' });
+    }
+
+    // Calculate time if it's missing
+    if (!route.estimatedTime && route.distance) {
+      const numPoints = route.points ? route.points.length : 0;
+      const timeEstimate = calculateEstimatedTime(route.distance, numPoints);
+      route.estimatedTime = timeEstimate.timeString;
+      route.estimatedTimeMinutes = timeEstimate.minutes;
+      await route.save();
+      console.log(`Updated time for route ${route.routeId}: ${timeEstimate.timeString}`);
+    }
+
+    res.json(route);
+  } catch (error) {
+    console.error('Error fetching latest route:', error);
+    res.status(500).json({ error: 'Failed to fetch latest route' });
   }
 };
 
@@ -113,5 +239,6 @@ module.exports = {
   createRoute,
   updateRouteStatus,
   deleteRoute,
-  getRouteById
+  getRouteById,
+  getLatestRoute
 };
